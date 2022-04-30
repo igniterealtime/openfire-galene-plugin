@@ -1,0 +1,11 @@
+{
+  "public": true,
+  "description": "A public place to hangout",
+  "allow-recording": true,
+  "allow-anonymous": true,
+  "allow-subgroups": true,
+  "op": [{}],
+  "presenter": [{}],
+  "other": [{}],  
+  "max-clients": 100
+}

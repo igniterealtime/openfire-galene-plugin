@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<plugin>
+    <author>Ignite Realtime</author>
+    <class>org.ifsoft.oju.openfire.Oju</class>
+    <name>${project.name}</name>
+    <description>${project.description}</description>
+    <version>${project.version}</version>
+    <licenseType>Apache 2.0</licenseType>
+    <date>04/30/2022</date>
+    <minServerVersion>4.0.0</minServerVersion>
+
+   <adminconsole>
+        <tab id="sidebar-media-services">     
+            <item id="oju-admin-ui" name="${config.page.admin}" description="${config.page.admin.description}" url="oju-admin.jsp" />                                                                        
+            <item id="oju-settings" name="${config.page.settings}" description="${config.page.settings.description}" url="oju.jsp"/>
+        </tab>      
+    </adminconsole> 
+</plugin>
