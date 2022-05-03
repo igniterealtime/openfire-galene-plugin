@@ -40,7 +40,7 @@ import org.ifsoft.oju.openfire.Oju;
     private static Logger Log = LoggerFactory.getLogger( "ProxyWebSocket" );
     private Session wsSession;
     private ProxyConnection proxyConnection;
-	private XmppConnection xmpp = null;
+	private org.ifsoft.websockets.XmppConnection xmpp = null;
 	private String room_name = null;
 	private String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
 	
@@ -101,7 +101,7 @@ import org.ifsoft.oju.openfire.Oju;
 				
 				if (! "".equals(username))
 				{
-					xmpp = new XmppConnection(this, username);	
+					xmpp = new org.ifsoft.websockets.XmppConnection(this, username);	
 					xmpp.route("<presence from=\"" + xmpp.getJid() + "\" />");
 					
 					String to = room_name + "@conference." + domain + "/" + username;

@@ -14,13 +14,13 @@
     
     String hostname = request.getServerName();
     String port = "https".equals(request.getScheme()) ? JiveGlobals.getProperty("httpbind.port.secure", "7443") : JiveGlobals.getProperty("httpbind.port.plain", "7070");    
-    String url = JiveGlobals.getProperty("oju.external.url", request.getScheme() + "://" + hostname + ":" + port) + "/stats.html";    
+    String url = JiveGlobals.getProperty("galene.external.url", request.getScheme() + "://" + hostname + ":" + port) + "/stats.html";    
 %>
 
 <html>
 <head>
 <title><fmt:message key="config.page.admin" /></title>
-<meta name="pageID" content="oju-admin-ui"/>
+<meta name="pageID" content="galene-admin-ui"/>
 <style type="text/css">
     #jive-main table, #jive-main-content {
         height: 92%;

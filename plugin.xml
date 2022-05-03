@@ -11,8 +11,8 @@
 
    <adminconsole>
         <tab id="sidebar-media-services">     
-            <item id="oju-admin-ui" name="${config.page.admin}" description="${config.page.admin.description}" url="oju-admin.jsp" />                                                                        
-            <item id="oju-settings" name="${config.page.settings}" description="${config.page.settings.description}" url="oju.jsp"/>
+            <item id="galene-admin-ui" name="${config.page.admin}" description="${config.page.admin.description}" url="galene-admin.jsp" />                                                                        
+            <item id="galene-settings" name="${config.page.settings}" description="${config.page.settings.description}" url="galene.jsp"/>
         </tab>      
     </adminconsole> 
 </plugin>

@@ -10,7 +10,8 @@ copy galene.jar to the plugins folder in
 
 # Hoow to use
 
-TODO
+This plugin auto-creates the Galene global /data/config.json file as well as the /groups/xxxx.json files for Galene video-conferences from Openfire MUC rooms. 
+Only public rooms with no passwords are currenty supported.
 
 # Further information
 
