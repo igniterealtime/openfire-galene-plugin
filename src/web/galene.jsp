@@ -1,5 +1,5 @@
 <%@ page import="java.util.*" %>
-<%@ page import="org.ifsoft.oju.openfire.*" %>
+<%@ page import="org.ifsoft.galene.openfire.*" %>
 <%@ page import="org.jivesoftware.openfire.*" %>
 <%@ page import="org.jivesoftware.util.*" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
@@ -11,7 +11,7 @@
     String errorMessage = null;
 
     // Get handle on the plugin
-    Oju plugin = Oju.self;
+    Galene plugin = Galene.self;
 
     if (update)
     {    

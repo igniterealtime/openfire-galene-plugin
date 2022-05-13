@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <plugin>
     <author>Ignite Realtime</author>
-    <class>org.ifsoft.oju.openfire.Oju</class>
+    <class>org.ifsoft.galene.openfire.Galene</class>
     <name>${project.name}</name>
     <description>${project.description}</description>
     <version>${project.version}</version>
@@ -10,8 +10,7 @@
     <minServerVersion>4.0.0</minServerVersion>
 
    <adminconsole>
-        <tab id="sidebar-media-services">     
-            <item id="galene-admin-ui" name="${config.page.admin}" description="${config.page.admin.description}" url="galene-admin.jsp" />                                                                        
+        <tab id="sidebar-media-services">                                                                            
             <item id="galene-settings" name="${config.page.settings}" description="${config.page.settings.description}" url="galene.jsp"/>
         </tab>      
     </adminconsole> 

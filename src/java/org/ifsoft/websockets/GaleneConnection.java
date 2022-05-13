@@ -38,170 +38,98 @@ import org.dom4j.Element;
 import org.xmpp.packet.*;
 
 
-public class ProxyConnection
-{
-    private static Logger Log = LoggerFactory.getLogger( "ProxyConnection" );
-    private boolean isSecure = false;
-    private ProxyWebSocket socket;
+public class GaleneConnection implements Serializable {
+    private static Logger Log = LoggerFactory.getLogger( "GaleneConnection" );
     private boolean connected = false;
     private WebSocketClient wsClient = null;
     private ProxySocket proxySocket = null;
-    private List<String> subprotocol = null;
+	private JID jid;
 
-    public ProxyConnection(URI uri, List<String> subprotocol, int connectTimeout)
-    {
-        Log.info("ProxyConnection " + uri + " " + subprotocol);
-        this.subprotocol = subprotocol;
+    public GaleneConnection(URI uri, int connectTimeout, JID jid) {
+        Log.info("GaleneConnection " + uri + " " + jid);
+		this.jid = jid;
+		
         final SslContextFactory clientSslContextFactory = SslContextFactoryProvider.getClientSslContextFactory();
 
-        if("wss".equals(uri.getScheme()))
-        {
-            Log.debug("ProxyConnection - SSL");
-            getSSLContext();
-            isSecure = true;
-        }
-        else isSecure = false;
-
         final HttpClient httpClient = new HttpClient(new HttpClientTransportOverHTTP(1),clientSslContextFactory);
-        final QueuedThreadPool queuedThreadPool = QueuedThreadPoolProvider.getQueuedThreadPool("ProxyConnection-HttpClient");
+        final QueuedThreadPool queuedThreadPool = QueuedThreadPoolProvider.getQueuedThreadPool("GaleneConnection-HttpClient");
         httpClient.setExecutor(queuedThreadPool);
         httpClient.setConnectTimeout(connectTimeout);
         wsClient = new WebSocketClient(httpClient);
 
-        try
-        {
+        try {
             wsClient.start();
             ClientUpgradeRequest request = new ClientUpgradeRequest();
-            if (subprotocol != null) request.setSubProtocols(subprotocol);
             proxySocket = new ProxySocket(this);
             wsClient.connect(proxySocket, uri, request);
 
             Log.debug("Connecting to : " + uri);
             connected = true;
         }
-        catch (Exception e)
-        {
-            Log.error("ProxyConnection " + uri, e);
+        catch (Exception e) {
+            Log.error("GaleneConnection " + uri, e);
             connected = false;
         }
     }
+	
+    public void deliver(String text) {
+        Log.debug("GaleneConnection - deliver \n" + text);
 
-    public void setSocket( ProxyWebSocket socket ) {
-        this.socket = socket;
-    }
-
-    public void deliver(String text)
-    {
-        Log.debug("ProxyConnection - deliver \n" + text);
-
-        if (proxySocket != null)
-        {
+        if (proxySocket != null) {
             proxySocket.deliver(text);
         }
     }
 
-    public void stop()
-    {
-        Log.debug("ProxyConnection - stop");
+    public void stop() {
+        Log.debug("GaleneConnection - stop");
 
-        try
-        {
+        try {
             wsClient.stop();
         }
-        catch (Exception e)
-        {
-            Log.error("ProxyConnection - stop", e);
+        catch (Exception e) {
+            Log.error("GaleneConnection - stop", e);
         }
     }
 
-    public void disconnect()
-    {
-        Log.debug("ProxyConnection - disconnect");
+    public void disconnect() {
+        Log.debug("GaleneConnection - disconnect");
         if (proxySocket != null) proxySocket.disconnect();
         if (wsClient != null) stop();
     }
 
-    public void onClose(int code, String reason)
-    {
-        Log.debug("ProxyConnection - onClose " + reason + " " + code);
+    public void onClose(int code, String reason) {
+        Log.debug("GaleneConnection - onClose " + reason + " " + code);
         connected = false;
-
-        if (this.socket != null) this.socket.disconnect();
     }
 
     public void onMessage(String text) {
-        Log.debug("ProxyConnection - onMessage \n" + text);
+        Log.debug("GaleneConnection - onMessage \n" + text);
 
         try {
-            this.socket.deliver(text);
+			IQ iq = new IQ(IQ.Type.set);
+			iq.setTo(jid);
+			iq.setType(IQ.Type.set);
+			iq.setFrom(XMPPServer.getInstance().getServerInfo().getXMPPDomain());
+			Element galene = iq.setChildElement("s2c", "urn:xmpp:sfu:galene:0");
+			galene.setText(text);
+			XMPPServer.getInstance().getIQRouter().route(iq);	
         }
-
         catch (Exception e) {
             Log.error("deliverRawText error", e);
         }
     }
-
-    public boolean isSecure() {
-        return isSecure;
-    }
-
+	
     public boolean isConnected() {
         return connected;
     }
-
-    public void setSecure(boolean isSecure) {
-        this.isSecure = isSecure;
-    }
-
-    private SSLContext getSSLContext()
-    {
-        SSLContext sc = null;
-
-        try {
-            Log.debug("ProxyConnection SSL truster");
-
-            TrustManager[] trustAllCerts = new TrustManager[]
-            {
-               new X509TrustManager() {
-                  public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                    return null;
-                  }
-
-                  public void checkClientTrusted(X509Certificate[] certs, String authType) {  }
-
-                  public void checkServerTrusted(X509Certificate[] certs, String authType) {  }
-
-               }
-            };
-
-            sc = SSLContext.getInstance("SSL");
-            sc.init(null, trustAllCerts, new java.security.SecureRandom());
-            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-
-            // Create all-trusting host name verifier
-            HostnameVerifier allHostsValid = new HostnameVerifier()
-            {
-                public boolean verify(String hostname, SSLSession session) {
-                  return true;
-                }
-            };
-            // Install the all-trusting host verifier
-            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-
-        } catch (Exception e)   {
-            Log.error("getSSLContext SSL truster", e);
-        }
-
-        return sc;
-    }
-
+	
     @WebSocket(maxTextMessageSize = 64 * 1024) public class ProxySocket
     {
         private Session session;
-        private ProxyConnection proxyConnection;
+        private GaleneConnection proxyConnection;
         private String ipaddr = null;
 
-        public ProxySocket(ProxyConnection proxyConnection)
+        public ProxySocket(GaleneConnection proxyConnection)
         {
             this.proxyConnection = proxyConnection;
         }

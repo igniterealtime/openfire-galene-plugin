@@ -3864,7 +3864,7 @@ async function serverConnect() {
     serverConnection.onchat = addToChatbox;
     serverConnection.onusermessage = gotUserMessage;
 
-    let url = `ws${location.protocol === 'https:' ? 's' : ''}://${location.host}/galene-ws/`;	// BAO
+    let url = `ws${location.protocol === 'https:' ? 's' : ''}://${location.host}/ws`;
     try {
         await serverConnection.connect(url);
     } catch(e) {
@@ -3909,4 +3909,64 @@ async function start() {
     setViewportHeight();
 }
 
-start();
+//start();
+
+window.onload = async function() {	
+    if(serverConnection && serverConnection.socket)
+        serverConnection.close();
+    serverConnection = new ServerConnection();
+    serverConnection.onconnected = amConnected;
+    serverConnection.onpeerconnection = onPeerConnection;
+    serverConnection.onclose = gotClose;
+    serverConnection.ondownstream = gotDownStream;
+    serverConnection.onuser = gotUser;
+    serverConnection.onjoined = gotJoined;
+    serverConnection.onchat = addToChatbox;
+    serverConnection.onusermessage = gotUserMessage;
+
+	const url = (window.location.protocol == "https:" ? "wss:" : "ws:") + '//' + window.location.host + "/ws/";
+	const username = urlParam("username");
+    const jid = username + "@localhost";
+    const password = "Welcome123";
+	
+	group = "public/" + urlParam("group");	
+	setTitle(capitalise(group));
+    addFilters();
+    setMediaChoices(false).then(e => reflectSettings());	
+
+    const connection = new Strophe.Connection(url);
+	
+    connection.connect(jid, password, async (status) => {
+        console.debug("XMPPConnection.connect", status);
+
+        if (status === Strophe.Status.CONNECTED) {
+            connection.send($pres());
+			await serverConnection.connect(connection);
+			setViewportHeight();			
+        }
+        else
+
+        if (status === Strophe.Status.DISCONNECTED) {
+			serverConnection.close();
+        }
+    });
+}
+
+function urlParam (name) {
+	var results = new RegExp('[\\?&]' + name + '=([^&#]*)').exec(window.location.href);
+	if (!results) { return undefined; }
+	return unescape(results[1] || undefined);
+}
+
+async function amConnected() {
+	console.debug("amConnected");		
+	const username = urlParam("username");
+	const pw = "";
+
+    try {
+        await serverConnection.join(group, username, pw);
+    } catch(e) {
+        console.error(e);
+        serverConnection.close();
+    }
+}

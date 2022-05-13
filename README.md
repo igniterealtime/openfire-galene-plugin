@@ -8,15 +8,8 @@ This version has embedded binaries for only Linux 64 and Windows 64.
 
 copy galene.jar to the plugins folder in 
 
-# Hoow to use
+# How to use
 
-This plugin auto-creates the Galene global /data/config.json file as well as the /groups/xxxx.json files for Galene video-conferences from Openfire MUC rooms. 
-Only public rooms with no passwords are currenty supported.
+This plugin implements XEP:XXXX - Video Conferencing over XMPP with a SFU
 
 # Further information
-
-Galène's web page is at <https://galene.org>.
-
-Answers to common questions and issues are at <https://galene.org#faq>.
-
--- Juliusz Chroboczek <https://www.irif.fr/~jch/>
