@@ -10,7 +10,7 @@ copy galene.jar to the plugins folder in
 
 # How to use
 
-This plugin implements [XEP:XXXX - Video Conferencing over XMPP with a SFU](https://igniterealtime.github.io/openfire-galene-plugin/xep/xep-xxx-sfu_01-01.xml)
+This plugin implements [XEP-XXXX: In-Band SFU Sessions](https://igniterealtime.github.io/openfire-galene-plugin/xep/xep-xxx-sfu_01-01.xml) for the Galene SFU
 
 # Further information
 
