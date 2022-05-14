@@ -46,6 +46,7 @@
 
 <section1 topic='Protocol' anchor='protocol'> 
 <p>As this is a generic specification, the protocol will depend on the SFU impmentation. Most SFUs use a symmetric, asynchronous protocol. In client-server usage, some messages are only sent in the client to server or in the server to client direction.</p>   
+<p>The namespace should be in the form "urn:xmpp:sfu:xxxxx:0" where xxxxx is the name of the SFU implementation. This will enable the XMPP server to validate the JSON if needed and the client to discover the expected SFU implementation.</p>	
   <section2 topic='Client to Server' anchor='c2s'> 
     
     <p>A sample protocol flow of a message from the XMPP client to the Galene SFU is shown below.</p> 
