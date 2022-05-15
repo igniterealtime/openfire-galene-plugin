@@ -68,7 +68,8 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
     private ExecutorService executor;
     private WebAppContext jspService;
     private GaleneIQHandler galeneIQHandler;
-
+    private RayoIQHandler rayoIQHandler;
+	
     public static Galene self;	
 
     public void destroyPlugin()
@@ -82,7 +83,10 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
 			
             XMPPServer.getInstance().getIQRouter().removeHandler(galeneIQHandler);
 			galeneIQHandler.stopHandler();
-            galeneIQHandler = null;			
+            galeneIQHandler = null;		
+
+			rayoIQHandler.stopHandler();
+            rayoIQHandler = null;				
 
             Log.info("gaelene terminated");
         }
@@ -99,10 +103,15 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
         startJSP(pluginDirectory);
         startGoProcesses(pluginDirectory);
         self = this;
+
+		XMPPServer.getInstance().getIQDiscoInfoHandler().addServerFeature("urn:xmpp:sfu:galene:0");	
 		
 		galeneIQHandler = new GaleneIQHandler();
 		galeneIQHandler.startHandler();		
 		XMPPServer.getInstance().getIQRouter().addHandler(galeneIQHandler);		
+		
+		rayoIQHandler = new RayoIQHandler();
+		rayoIQHandler.startHandler();				
 		
         Log.info("gaelene initiated");
     }
