@@ -64,10 +64,18 @@
 			"sdpMLineIndex":0
 		}
 	}
-    </c2s>
-  </json>
+    </json>
+  </c2s>	
 </iq> 
-    ]]></example> 
+    ]]></example>
+  <p>The XMPP server will maintain of SFU client connections and automatically create each one on the first message recieved from a client. </p>
+  <p>To close a connection, a client will send an empty &lt;c2s&gt; element.</p>
+    <example caption='Client closes the client connection by sending an empty &lt;c2s&gt; element to SFU'><![CDATA[
+<iq from="shakespeare.lit" to='any-user@shakespeare.lit/globe' type="set" id="q1">
+  <c2s xmlns="urn:xmpp:sfu:galene:0">
+  </c2s>
+</iq> 
+    ]]></example>  
   </section2>  
   <section2 topic='SFU to Client' anchor='c2s'>   
     <p>A sample protocol flow of a message from the Galene SFU to the XMPP client is shown below.</p> 
@@ -84,10 +92,10 @@
 			"sdpMLineIndex":0
 		}
 	}
-    </s2c>
-  </json>
+    </json>
+  </s2c>  
 </iq> 
-    ]]></example> 
+    ]]></example>  
   </section2>   
   <section2 topic='Rayo outbound call using SFU' anchor='c2s'>   
     <p>A sample protocol flow to initate a voice/video conversation between two users using Rayo for signalling and an SFU for media session management.</p> 
@@ -105,7 +113,7 @@
 
 <section1 topic='Deployment Notes' anchor='deployment'> 
 
-<p>The &lt;c2s&gt; and the &lt;s2c&gt; elements MUST NOT be empty, as the empty string is not valid JSON. The data MUST be encoded as UTF-8 (though officially unspecified, this is the de facto encoding for JSON today.</p>
+<p>The &lt;json&gt; element MUST NOT be empty, as the empty string is not valid JSON. The data MUST be encoded as UTF-8 (though officially unspecified, this is the de facto encoding for JSON today.</p>
 
 <p>Implementations SHOULD validate JSON they receive and intend to use, and be prepared to handle invalid data appropriately (such as by responding to the sender with the applicable XMPP error reply for the stanza type.</p>
 

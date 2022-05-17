@@ -55,23 +55,31 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener
 
 			try {
 				Log.info("Galene handleIQ \n" + iq.toString());
-				final Element element = iq.getChildElement();
+				final Element element = iq.getChildElement().element("json");
 				final String from = iq.getFrom().toBareJID();
 				GaleneConnection connection = (GaleneConnection) connections.get(from);
-				
-				if (connection == null || !connection.isConnected()) {
-					String galenePort = JiveGlobals.getProperty("galene.port", Galene.self.getPort());		
-					String url = "ws://localhost:" + galenePort + "/ws";		
-					connection = new GaleneConnection(URI.create(url), 10000, iq.getFrom());	
 					
-					try {
-						connections.put(from, connection);
-					} catch (Exception e) {
-						Log.error("Galene handleIQ Cache error", e);						
+				if (element != null) {
+					
+					if (connection == null || !connection.isConnected()) {
+						String galenePort = JiveGlobals.getProperty("galene.port", Galene.self.getPort());		
+						String url = "ws://localhost:" + galenePort + "/ws";		
+						connection = new GaleneConnection(URI.create(url), 10000, iq.getFrom());	
+						
+						try {
+							connections.put(from, connection);
+						} catch (Exception e) {
+							Log.error("Galene handleIQ Cache error", e);						
+						}
+					}
+
+					connection.deliver(element.getText());
+				}
+				else {
+					if (connection != null && connection.isConnected()) {
+						connection.disconnect();
 					}
 				}
-
-				connection.deliver(element.getText());
 				return reply;
 
 			} catch(Exception e) {
