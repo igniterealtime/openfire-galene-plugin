@@ -80,7 +80,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
             if (executor != null)  executor.shutdown();
             if (galeneThread != null) galeneThread.destory();
             if (jspService != null) HttpBindManager.getInstance().removeJettyHandler(jspService);
-			
+		
             XMPPServer.getInstance().getIQRouter().removeHandler(galeneIQHandler);
 			galeneIQHandler.stopHandler();
             galeneIQHandler = null;		
@@ -102,13 +102,12 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
         executor = Executors.newCachedThreadPool();
         startJSP(pluginDirectory);
         startGoProcesses(pluginDirectory);
-        self = this;
-
-		XMPPServer.getInstance().getIQDiscoInfoHandler().addServerFeature("urn:xmpp:sfu:galene:0");	
+        self = this;	
 		
 		galeneIQHandler = new GaleneIQHandler();
 		galeneIQHandler.startHandler();		
-		XMPPServer.getInstance().getIQRouter().addHandler(galeneIQHandler);		
+		XMPPServer.getInstance().getIQRouter().addHandler(galeneIQHandler);	
+		XMPPServer.getInstance().getIQDiscoInfoHandler().addServerFeature("urn:xmpp:sfu:galene:0");			
 		
 		rayoIQHandler = new RayoIQHandler();
 		rayoIQHandler.startHandler();				

@@ -3,6 +3,7 @@ package org.ifsoft.galene.openfire;
 import org.dom4j.Element;
 import org.jivesoftware.openfire.IQHandlerInfo;
 import org.jivesoftware.openfire.handler.IQHandler;
+import org.jivesoftware.openfire.disco.ServerFeaturesProvider;
 import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.util.JiveGlobals;
 import org.jivesoftware.util.cache.Cache;
@@ -28,10 +29,9 @@ import net.sf.json.*;
 /**
  * custom IQ handler for Galene SFU requests and responses
  */
-public class GaleneIQHandler extends IQHandler implements SessionEventListener
+public class GaleneIQHandler extends IQHandler implements SessionEventListener, ServerFeaturesProvider
 {
     private final static Logger Log = LoggerFactory.getLogger( GaleneIQHandler.class );	
-    //private static Cache<String, GaleneConnection> connections = CacheFactory.createLocalCache("SFU Connections");	
 	private ConcurrentHashMap<String, GaleneConnection> connections = new ConcurrentHashMap<>();
 
 	public void startHandler() {
@@ -96,6 +96,14 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener
     {
         return new IQHandlerInfo("c2s", "urn:xmpp:sfu:galene:0");
     }
+	
+    @Override
+    public Iterator<String> getFeatures()
+    {
+        final ArrayList<String> features = new ArrayList<>();
+        features.add( "urn:xmpp:sfu:galene:0" );
+        return features.iterator();
+    }	
 
     private String removeNull(String s)
     {
