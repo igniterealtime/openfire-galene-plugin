@@ -103,7 +103,7 @@ public class GaleneConnection implements Serializable {
     }
 
     public void onMessage(String text) {
-        Log.debug("GaleneConnection - onMessage \n" + text);
+        Log.info("S2C \n" + text);
 
         try {
 			IQ iq = new IQ(IQ.Type.set);

@@ -165,7 +165,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
 
     public void onErrorLine(final String line)
     {
-        Log.debug(line);
+        Log.info(line);
     }
 
     public void onError(final Throwable t)

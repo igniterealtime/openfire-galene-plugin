@@ -54,7 +54,7 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 			IQ reply = IQ.createResultIQ(iq);
 
 			try {
-				Log.info("Galene handleIQ \n" + iq.toString());
+				Log.debug("Galene handleIQ \n" + iq.toString());
 				final Element element = iq.getChildElement().element("json");
 				final String from = iq.getFrom().toBareJID();
 				GaleneConnection connection = (GaleneConnection) connections.get(from);
@@ -73,7 +73,9 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 						}
 					}
 
-					connection.deliver(element.getText());
+					String text = element.getText();
+					Log.info("C2S \n" + text);
+					connection.deliver(text);
 				}
 				else {
 					if (connection != null && connection.isConnected()) {
