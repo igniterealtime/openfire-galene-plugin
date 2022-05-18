@@ -109,7 +109,7 @@ public class GaleneConnection implements Serializable {
 			IQ iq = new IQ(IQ.Type.set);
 			iq.setTo(jid);
 			iq.setType(IQ.Type.set);
-			iq.setFrom(XMPPServer.getInstance().getServerInfo().getXMPPDomain());
+			iq.setFrom(XMPPServer.getInstance().getServerInfo().getHostname());
 			Element galene = iq.setChildElement("s2c", "urn:xmpp:sfu:galene:0");
 			Element json = galene.addElement("json", "urn:xmpp:json:0");
 			json.setText(text);
