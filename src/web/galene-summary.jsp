@@ -44,16 +44,7 @@
     </div><br>
 
 <%  } 
-    if (sessionCount == 0) {
-%>
-    <tr>
-        <td align="center" colspan="10">
-            <fmt:message key="galene.summary.no.sessionss" />
-        </td>
-    </tr>
 
-<%
-    }
 	for (int s=0; s<connections.length(); s++) {
 		JSONObject connection = connections.getJSONObject(s);
 
@@ -88,6 +79,7 @@
 
 </tbody>
 </table>
+</div>
 <%	
 		continue;
     }
@@ -199,10 +191,11 @@
 		}
       }
 %>
-</tbody>
-</table>
 <%		  
 	}
 %>
+</tbody>
+</table>
+</div>
 </body>
 </html>
