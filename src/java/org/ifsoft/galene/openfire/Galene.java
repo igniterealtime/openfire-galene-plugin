@@ -1,13 +1,13 @@
 package org.ifsoft.galene.openfire;
 
-import java.io.File;
+import java.io.*;
 import java.net.*;
 import java.util.concurrent.*;
 import java.util.*;
 import java.util.function.*;
 import java.util.stream.*;
 import java.nio.file.*;
-import java.nio.charset.Charset;
+import java.nio.charset.*;
 import java.security.Security;
 
 import org.jivesoftware.openfire.container.Plugin;
@@ -338,5 +338,164 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
     public void xmlPropertyDeleted(String property, Map<String, Object> params) {
 
     }
+	
+    //-------------------------------------------------------
+    //
+    //  Utility methods
+    //
+    //-------------------------------------------------------	
 
+	public String getJson(String urlToRead)  {
+		URL url;
+		HttpURLConnection conn;
+		BufferedReader rd;
+		String line;
+		StringBuilder result = new StringBuilder();
+
+		String username = JiveGlobals.getProperty("galene.username", "administrator");
+		String password = JiveGlobals.getProperty("galene.password", "administrator");		
+		String auth = username + ":" + password;
+		String authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));	;
+		String uri = "http://localhost:" + getPort() + urlToRead;
+
+		try {
+			url = new URL(uri);
+			conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestProperty("Authorization", authHeaderValue);			
+			conn.setRequestMethod("GET");
+			rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			
+			while ((line = rd.readLine()) != null) {
+				result.append(line);
+			}
+			rd.close();
+
+		} catch (Exception e) {
+			Log.error("getJson", e);
+		}
+
+		return result.toString();
+	}
+
+	// [{"name":"public"}]	
+	// [{"name":"public"},{"name":"public/andrew"}]
+	// [{"name":"public"},{"name":"public/andrew","clients":[{"id":"e7be0b2866dbdaa244c9e6c0a38f51d1"}]}]
+	// [{"name":"public"},{"name":"public/andrew","clients":[{"id":"e7be0b2866dbdaa244c9e6c0a38f51d1","up":[{"id":"ecf670561db25979306de18e301f4df4","tracks":[{"bitrate":0,"maxBitrate":204800,"loss":0,"jitter":0.333328},{"bitrate":0,"maxBitrate":204800,"loss":0,"jitter":3.655519}]}]}]}]
+	// [{"name":"public"},{"name":"public/andrew","clients":[{"id":"e7be0b2866dbdaa244c9e6c0a38f51d1","up":[{"id":"ecf670561db25979306de18e301f4df4","tracks":[{"bitrate":0,"maxBitrate":512000,"loss":0,"jitter":0.499992},{"bitrate":0,"maxBitrate":512000,"loss":0,"jitter":7.344371}]}]},{"id":"e8a9f45f4be9c58704c1536384d2c270","down":[{"id":"ecf670561db25979306de18e301f4df4","tracks":[{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":0,"maxBitrate":512000,"loss":0,"jitter":0.708333},{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":0,"maxBitrate":512000,"loss":0,"jitter":7.966666}]}]}]}]
+	// [{"name":"public"},{"name":"public/andrew","clients":[{"id":"6ffd7537fbaacfeb71ea541f3e9089bd","up":[{"id":"ab1130bc0f24e6bda1a543fbc3a128a7","tracks":[{"bitrate":36576,"maxBitrate":512000,"loss":0,"jitter":0.499992},{"bitrate":653600,"maxBitrate":708004,"loss":0,"jitter":7.188817}]}],"down":[{"id":"21c21315456adf851c1518251e20660d","tracks":[{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":36616,"maxBitrate":512000,"loss":0,"rtt":0.583577,"jitter":0.291666},{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":715008,"maxBitrate":1024327,"loss":0,"rtt":0.838623,"jitter":8.255555}]}]},{"id":"e7be0b2866dbdaa244c9e6c0a38f51d1","up":[{"id":"21c21315456adf851c1518251e20660d","tracks":[{"bitrate":37192,"maxBitrate":512000,"loss":0,"jitter":0.395827},{"bitrate":712432,"maxBitrate":1024327,"loss":0,"jitter":5.288836}]}],"down":[{"id":"ab1130bc0f24e6bda1a543fbc3a128a7","tracks":[{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":37104,"maxBitrate":512000,"loss":0,"rtt":0.868041,"jitter":0.4375},{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":630360,"maxBitrate":708004,"loss":0,"rtt":0.661824,"jitter":10.388888}]}]}]}]
+	
+	/*
+	[
+	  {
+		"name": "public"
+	  },
+	  {
+		"name": "public/andrew",
+		"clients": [
+		  {
+			"id": "6ffd7537fbaacfeb71ea541f3e9089bd",
+			"up": [
+			  {
+				"id": "ab1130bc0f24e6bda1a543fbc3a128a7",
+				"tracks": [
+				  {
+					"bitrate": 36576,
+					"maxBitrate": 512000,
+					"loss": 0,
+					"jitter": 0.499992
+				  },
+				  {
+					"bitrate": 653600,
+					"maxBitrate": 708004,
+					"loss": 0,
+					"jitter": 7.188817
+				  }
+				]
+			  }
+			],
+			"down": [
+			  {
+				"id": "21c21315456adf851c1518251e20660d",
+				"tracks": [
+				  {
+					"sid": 0,
+					"maxSid": 0,
+					"tid": 0,
+					"maxTid": 0,
+					"bitrate": 36616,
+					"maxBitrate": 512000,
+					"loss": 0,
+					"rtt": 0.583577,
+					"jitter": 0.291666
+				  },
+				  {
+					"sid": 0,
+					"maxSid": 0,
+					"tid": 0,
+					"maxTid": 0,
+					"bitrate": 715008,
+					"maxBitrate": 1024327,
+					"loss": 0,
+					"rtt": 0.838623,
+					"jitter": 8.255555
+				  }
+				]
+			  }
+			]
+		  },
+		  {
+			"id": "e7be0b2866dbdaa244c9e6c0a38f51d1",
+			"up": [
+			  {
+				"id": "21c21315456adf851c1518251e20660d",
+				"tracks": [
+				  {
+					"bitrate": 37192,
+					"maxBitrate": 512000,
+					"loss": 0,
+					"jitter": 0.395827
+				  },
+				  {
+					"bitrate": 712432,
+					"maxBitrate": 1024327,
+					"loss": 0,
+					"jitter": 5.288836
+				  }
+				]
+			  }
+			],
+			"down": [
+			  {
+				"id": "ab1130bc0f24e6bda1a543fbc3a128a7",
+				"tracks": [
+				  {
+					"sid": 0,
+					"maxSid": 0,
+					"tid": 0,
+					"maxTid": 0,
+					"bitrate": 37104,
+					"maxBitrate": 512000,
+					"loss": 0,
+					"rtt": 0.868041,
+					"jitter": 0.4375
+				  },
+				  {
+					"sid": 0,
+					"maxSid": 0,
+					"tid": 0,
+					"maxTid": 0,
+					"bitrate": 630360,
+					"maxBitrate": 708004,
+					"loss": 0,
+					"rtt": 0.661824,
+					"jitter": 10.388888
+				  }
+				]
+			  }
+			]
+		  }
+		]
+	  }
+	]	
+	*/
 }

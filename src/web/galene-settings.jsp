@@ -88,7 +88,7 @@
                     <fmt:message key="config.page.configuration.password"/>
                 </td>
                 <td><input type="password" size="50" maxlength="100" name="password" required
-                       value="<%= JiveGlobals.getProperty("galene.password", "admin") %>">
+                       value="<%= JiveGlobals.getProperty("galene.password", "administrator") %>">
                 </td>
             </tr>              
             <tr>

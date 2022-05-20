@@ -11,7 +11,8 @@
 
    <adminconsole>
         <tab id="sidebar-media-services">                                                                            
-            <item id="galene-settings" name="${config.page.settings}" description="${config.page.settings.description}" url="galene.jsp"/>
+            <item id="galene-summary" name="${config.page.summary}" description="${config.page.summary.description}" url="galene-summary.jsp"/>
+            <item id="galene-settings" name="${config.page.settings}" description="${config.page.settings.description}" url="galene-settings.jsp"/>			
         </tab>      
     </adminconsole> 
 </plugin>
