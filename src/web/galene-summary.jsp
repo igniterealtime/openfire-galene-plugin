@@ -1,5 +1,5 @@
 <%@ page import="org.jivesoftware.util.*,
-				 org.ifsoft.galene.openfire.Galene,
+				 org.ifsoft.galene.openfire.*,
                  java.util.*,
 				 net.sf.json.*,
                  java.net.URLEncoder"                 
@@ -91,12 +91,18 @@
 		JSONObject client = clients.getJSONObject(t);
 		JSONArray ups = new JSONArray();
 		JSONArray downs = new JSONArray();	
+				
+		String id = client.getString("id");
+		
+		if (GaleneIQHandler.clients.containsKey(id)) {
+			id = GaleneIQHandler.clients.get(id).getFullId();
+		}		
 		
 		if (!client.has("up") && !client.has("down")) {
 %>
 			<tr>
 				<td width="10%" valign="center">
-					<%= client.getString("id") %>
+					<%= id %>
 				</td>	
 				<td align="center" colspan="8">
 				</td>
@@ -126,8 +132,8 @@
 %>
 				<tr class="jive-<%= (((i%2)==0) ? "even" : "odd") %>">
 					
-					<td width="10%" valign="center">
-						<%= (c == 0 && r ==0) ? client.getString("id") : "" %>
+					<td width="10%" valign="left">
+						<%= (c == 0 && r ==0) ? id : "" %>
 					</td>
 						
 					
@@ -178,7 +184,7 @@
 <%
 			if (c == 0 && r == 0) {
 %>
-						<a href="galene-expire.jsp?client=<%= URLEncoder.encode(client.getString("id"), "UTF-8") %>&stream=<%= URLEncoder.encode(data.getJSONObject(k).getString("id"), "UTF-8") %>" title="<fmt:message key="galene.client.expire" />">
+						<a href="galene-expire.jsp?client=<%= URLEncoder.encode(client.getString("id"), "UTF-8") %>&group=<%= URLEncoder.encode(connection.getString("name"), "UTF-8") %>" title="<fmt:message key="galene.client.expire" />">
 							<img src="images/delete-16x16.gif" width="16" height="16" border="0" alt="">
 						</a>
 <%
@@ -191,11 +197,11 @@
 		}
       }
 %>
-<%		  
-	}
-%>
 </tbody>
 </table>
 </div>
+<%		  
+	}
+%>
 </body>
 </html>

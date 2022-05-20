@@ -32,8 +32,10 @@ import net.sf.json.*;
 public class GaleneIQHandler extends IQHandler implements SessionEventListener, ServerFeaturesProvider
 {
     private final static Logger Log = LoggerFactory.getLogger( GaleneIQHandler.class );	
-	private ConcurrentHashMap<String, GaleneConnection> connections = new ConcurrentHashMap<>();
-
+	public final static ConcurrentHashMap<String, GaleneConnection> connections = new ConcurrentHashMap<>();
+	public final static ConcurrentHashMap<String, GaleneConnection> clients = new ConcurrentHashMap<>();
+	
+	
 	public void startHandler() {
 		SessionEventDispatcher.addListener(this);
 	}
@@ -75,6 +77,7 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 
 					String text = element.getText();
 					Log.info("C2S \n" + text);
+					intercept(text, from, connection);
 					connection.deliver(text);
 				}
 				else {
@@ -92,6 +95,16 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 		}
 		return null;
     }	
+	
+	
+	private void intercept(String text, String from, GaleneConnection connection) {
+		JSONObject message = new JSONObject(text);
+
+		if (message.has("type") && "handshake".equals(message.getString("type")) && message.has("id")) {
+			String id = message.getString("id");			
+			GaleneIQHandler.clients.put(id, connection);
+		}		
+	}	
 
     @Override
     public IQHandlerInfo getInfo()

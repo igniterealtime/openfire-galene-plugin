@@ -11,9 +11,10 @@
 
 <% 
 	String client = ParamUtils.getParameter(request,"client");
-	String stream = ParamUtils.getParameter(request,"stream");
+	String group = ParamUtils.getParameter(request,"group");
     	
-
+	Galene.self.terminateClient(client, group);
+	
 	// Done, so redirect
 	response.sendRedirect("galene-summary.jsp?deletesuccess=true");
 	return;

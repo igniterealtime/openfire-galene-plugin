@@ -69,6 +69,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
     private WebAppContext jspService;
     private GaleneIQHandler galeneIQHandler;
     private RayoIQHandler rayoIQHandler;
+	private GaleneConnection adminConnection;
 	
     public static Galene self;	
 
@@ -77,6 +78,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
         PropertyEventDispatcher.removeListener(this);
 
         try {
+			if (adminConnection != null) adminConnection.disconnect();
             if (executor != null)  executor.shutdown();
             if (galeneThread != null) galeneThread.destory();
             if (jspService != null) HttpBindManager.getInstance().removeJettyHandler(jspService);
@@ -200,6 +202,16 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
             String turn = JiveGlobals.getProperty("galene.turn.ipaddr", getIpAddress()) + ":" + JiveGlobals.getProperty("galene.turn.port", "10014");
             String params = "--insecure=true --http=:" + getPort() + " --turn=" + turn;
             galeneThread = Spawn.startProcess(galeneExePath + " " + params, new File(galeneHomePath), this);
+			
+			try
+			{	
+				Thread.sleep(1000);
+				startAdminConnection();
+			}
+			catch (Exception e)
+			{
+				Log.error("startGoProcesses error", e);
+			}		
 
             Log.info("Galene enabled " + galeneExePath);
 
@@ -338,6 +350,82 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
     public void xmlPropertyDeleted(String property, Map<String, Object> params) {
 
     }
+
+    //-------------------------------------------------------
+    //
+    //  Admin connection to Galene
+    //
+    //-------------------------------------------------------	
+	
+	private void startAdminConnection() {
+		String galenePort = JiveGlobals.getProperty("galene.port", Galene.self.getPort());		
+		String url = "ws://localhost:" + galenePort + "/ws";		
+		adminConnection = new GaleneConnection(URI.create(url), 10000, null);
+		
+		String username = JiveGlobals.getProperty("galene.username", "administrator");
+		JSONObject handshake = new JSONObject();
+		handshake.put("id", username);
+		sendMessage("handshake", handshake, adminConnection);
+	}	
+	
+	public void onMessage(String text) {
+		Log.info("S2Amin \n" + text);
+		JSONObject message = new JSONObject(text);
+
+		if (message.has("type") && "ping".equals(message.getString("type"))) {
+			sendMessage("pong", new JSONObject(), adminConnection);
+		}
+	}
+
+	private void sendMessage(String type, JSONObject payload, GaleneConnection connection) {
+		payload.put("type", type);			
+		String text = payload.toString();
+		Log.info("Admin2S \n" + text);
+		connection.deliver(text);
+	}
+
+	public void terminateClient(String id, String group) {
+		/*
+		 {
+			 "type":"join",
+			 "kind":"join",
+			 "group":"public/andrew",
+			 "username":"dele",
+			 "password":""
+		 }
+		
+		 {
+			 "type":"useraction",
+			 "source":"7a8864fce6e6537830725be91bc688a7",
+			 "dest":"7a8864fce6e6537830725be91bc688a7",
+			 "username":"dele",
+			 "kind":"kick",
+			 "value":""
+		}
+
+		 {
+			 "type":"join",
+			 "kind":"leave",
+			 "group":"public/andrew",
+			 "username":"dele",
+			 "password":""
+		 }		
+		
+		*/ 
+		
+		if (GaleneIQHandler.clients.containsKey(id)) {	
+			GaleneConnection connection	= GaleneIQHandler.clients.get(id);
+			String username = JiveGlobals.getProperty("galene.username", "administrator");
+			
+			JSONObject useraction = new JSONObject();
+			useraction.put("source", id);
+			useraction.put("dest", id);
+			useraction.put("username", connection.getId());
+			useraction.put("kind", "kick");
+			useraction.put("value", "");
+			sendMessage("useraction", useraction, connection);			
+		}
+	}
 	
     //-------------------------------------------------------
     //
@@ -375,15 +463,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
 		}
 
 		return result.toString();
-	}
-
-	// [{"name":"public"}]	
-	// [{"name":"public"},{"name":"public/andrew"}]
-	// [{"name":"public"},{"name":"public/andrew","clients":[{"id":"e7be0b2866dbdaa244c9e6c0a38f51d1"}]}]
-	// [{"name":"public"},{"name":"public/andrew","clients":[{"id":"e7be0b2866dbdaa244c9e6c0a38f51d1","up":[{"id":"ecf670561db25979306de18e301f4df4","tracks":[{"bitrate":0,"maxBitrate":204800,"loss":0,"jitter":0.333328},{"bitrate":0,"maxBitrate":204800,"loss":0,"jitter":3.655519}]}]}]}]
-	// [{"name":"public"},{"name":"public/andrew","clients":[{"id":"e7be0b2866dbdaa244c9e6c0a38f51d1","up":[{"id":"ecf670561db25979306de18e301f4df4","tracks":[{"bitrate":0,"maxBitrate":512000,"loss":0,"jitter":0.499992},{"bitrate":0,"maxBitrate":512000,"loss":0,"jitter":7.344371}]}]},{"id":"e8a9f45f4be9c58704c1536384d2c270","down":[{"id":"ecf670561db25979306de18e301f4df4","tracks":[{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":0,"maxBitrate":512000,"loss":0,"jitter":0.708333},{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":0,"maxBitrate":512000,"loss":0,"jitter":7.966666}]}]}]}]
-	// [{"name":"public"},{"name":"public/andrew","clients":[{"id":"6ffd7537fbaacfeb71ea541f3e9089bd","up":[{"id":"ab1130bc0f24e6bda1a543fbc3a128a7","tracks":[{"bitrate":36576,"maxBitrate":512000,"loss":0,"jitter":0.499992},{"bitrate":653600,"maxBitrate":708004,"loss":0,"jitter":7.188817}]}],"down":[{"id":"21c21315456adf851c1518251e20660d","tracks":[{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":36616,"maxBitrate":512000,"loss":0,"rtt":0.583577,"jitter":0.291666},{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":715008,"maxBitrate":1024327,"loss":0,"rtt":0.838623,"jitter":8.255555}]}]},{"id":"e7be0b2866dbdaa244c9e6c0a38f51d1","up":[{"id":"21c21315456adf851c1518251e20660d","tracks":[{"bitrate":37192,"maxBitrate":512000,"loss":0,"jitter":0.395827},{"bitrate":712432,"maxBitrate":1024327,"loss":0,"jitter":5.288836}]}],"down":[{"id":"ab1130bc0f24e6bda1a543fbc3a128a7","tracks":[{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":37104,"maxBitrate":512000,"loss":0,"rtt":0.868041,"jitter":0.4375},{"sid":0,"maxSid":0,"tid":0,"maxTid":0,"bitrate":630360,"maxBitrate":708004,"loss":0,"rtt":0.661824,"jitter":10.388888}]}]}]}]
-	
+	}	
 	/*
 	[
 	  {

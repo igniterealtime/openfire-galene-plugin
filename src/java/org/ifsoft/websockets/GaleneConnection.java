@@ -36,6 +36,7 @@ import org.jivesoftware.openfire.XMPPServer;
 import net.sf.json.*;
 import org.dom4j.Element;
 import org.xmpp.packet.*;
+import org.ifsoft.galene.openfire.Galene;
 
 
 public class GaleneConnection implements Serializable {
@@ -71,6 +72,14 @@ public class GaleneConnection implements Serializable {
             connected = false;
         }
     }
+
+	public String getFullId() {
+		return jid != null ? jid.toBareJID() : "";
+	}
+	
+	public String getId() {
+		return jid != null ? jid.getNode() : "";
+	}
 	
     public void deliver(String text) {
         Log.debug("GaleneConnection - deliver \n" + text);
@@ -105,19 +114,23 @@ public class GaleneConnection implements Serializable {
     public void onMessage(String text) {
         Log.info("S2C \n" + text);
 
-        try {
-			IQ iq = new IQ(IQ.Type.set);
-			iq.setTo(jid);
-			iq.setType(IQ.Type.set);
-			iq.setFrom(XMPPServer.getInstance().getServerInfo().getHostname());
-			Element galene = iq.setChildElement("s2c", "urn:xmpp:sfu:galene:0");
-			Element json = galene.addElement("json", "urn:xmpp:json:0");
-			json.setText(text);
-			XMPPServer.getInstance().getIQRouter().route(iq);	
-        }
-        catch (Exception e) {
-            Log.error("deliverRawText error", e);
-        }
+		if (jid != null) {
+			try {
+				IQ iq = new IQ(IQ.Type.set);
+				iq.setTo(jid);
+				iq.setType(IQ.Type.set);
+				iq.setFrom(XMPPServer.getInstance().getServerInfo().getHostname());
+				Element galene = iq.setChildElement("s2c", "urn:xmpp:sfu:galene:0");
+				Element json = galene.addElement("json", "urn:xmpp:json:0");
+				json.setText(text);
+				XMPPServer.getInstance().getIQRouter().route(iq);	
+			}
+			catch (Exception e) {
+				Log.error("deliverRawText error", e);
+			}
+		} else {
+			Galene.self.onMessage(text);
+		}
     }
 	
     public boolean isConnected() {
