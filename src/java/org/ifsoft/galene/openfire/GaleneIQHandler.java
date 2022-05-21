@@ -101,7 +101,8 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 		JSONObject message = new JSONObject(text);
 
 		if (message.has("type") && "handshake".equals(message.getString("type")) && message.has("id")) {
-			String id = message.getString("id");			
+			String id = message.getString("id");	
+			connection.id = id;
 			GaleneIQHandler.clients.put(id, connection);
 		}		
 	}	
@@ -161,7 +162,11 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
         Log.debug("GaleneIQHandler -  sessionDestroyed "+ session.getAddress().toString() + "\n" + ((ClientSession) session).getPresence().toXML());
 		
 		final String from = session.getAddress().toBareJID();
-		GaleneConnection connection = (GaleneConnection) connections.remove(from);	
-		if (connection != null) connection.disconnect();
+		GaleneConnection connection = (GaleneConnection) connections.remove(from);
+		
+		if (connection != null) {
+			clients.remove(connection.id);
+			connection.disconnect();
+		}
     }	
 }

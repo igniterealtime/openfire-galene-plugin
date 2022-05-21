@@ -45,6 +45,8 @@ public class GaleneConnection implements Serializable {
     private WebSocketClient wsClient = null;
     private ProxySocket proxySocket = null;
 	private JID jid;
+	
+	public String id;
 
     public GaleneConnection(URI uri, int connectTimeout, JID jid) {
         Log.info("GaleneConnection " + uri + " " + jid);
