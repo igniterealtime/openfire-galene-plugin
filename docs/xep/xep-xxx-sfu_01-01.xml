@@ -34,18 +34,32 @@
   <p>An SFU (selective forwarding unit) is capable of receiving multiple media streams and then decides which of these media streams should be sent to which participants.
 	In the SFU architecture, every participant sends their media stream to a centralized selective forwarding unit (SFU) and receives streams from all other participants via the same SFU.</p>
   <p>The purpose of this protocol extension is to provide a generic specification of how an XMPP client can communicate in-band with an SFU via simple IQ stanzas</p>
+  <p></p>
 </section1> 
 
 <section1 topic='Requirements' anchor='reqs'> 
   <p>This document addresses the following requirements:</p> 
   <ul> 
     <li><p>Enable an XMPP client to maintain a session with a SFU from an existing XMPP connection without switching protocols or transport. The XMPP server will act as a proxy and maintain the required connection to the SFU. Typically, the SFU will bind to localhost and accept websocket connections from the XMPP server. This removes the need to expose the SFU directly to clients.</p> </li>
-    <li><p>Enable the client to send the required content/payload to the SFU without any need to marshall that data to or from XML. Typically, this would be JSON content with embedded SDP for the media sessions. The server does not need to inspect the contents or impose itself into the media flow in order to route the stanza sucessfully to the SFU.</p></li> 
+    <li><p>Provide a WebRTC XMPP ingress protocol (WXIP) like WHIP <note>WebRTC-HTTP ingestion protocol&lt;<link url="https://github.com/wish-wg/webrtc-http-ingest-protocol">https://github.com/wish-wg/webrtc-http-ingest-protocol</link>&gt;.</note> that can be used to publish a WebRTC media stream to an SFU</p></li>	
+    <li><p>Provide a WebRTC XMPP access protocol (WXAP) like WHAP <note>WebRTC-HTTP access protocol&lt;<link url="https://github.com/x186k/webrtc-http-access-protocol/blob/master/draft-elliott-whap.txt">https://github.com/x186k/webrtc-http-access-protocol/blob/master/draft-elliott-whap.txt</p></li>	
+    <li><p>Provide an SFU direct access protocol to enable a XMPP client send the required content/payload directly to the SFU without any need to marshall that data to or from XML. Typically, this would be JSON content with embedded SDP for the media sessions. The server does not need to inspect the contents or impose itself into the media flow in order to route the stanza sucessfully to the SFU.</p></li> 
 	<li><p>Enable a third-party remote control signalling protocol like <link url="https://xmpp.org/extensions/xep-0327.html">XEP-0327: Rayo</link><note>XEP-0327: Rayo &lt;<link url="https://xmpp.org/extensions/xep-0327.html">https://xmpp.org/extensions/xep-0327.html</link>&gt;.</note> or <link url="https://comitfs.github.io/openlink-v2.js/xep/index.html">XEP-XXXX: Openlink</link><note>XEP-XXXX: Openlink &lt;<link url="https://comitfs.github.io/openlink-v2.js/xep/index.html">https://comitfs.github.io/openlink-v2.js/xep/index.html</link>&gt;.</note> to be combined with an SFU to provide an alternative to first-party protocols such as Jingle or SIP for the  support of session management/signaling, as well as advanced media resources such as speech recognizers, speech synthesizers and audio/video recorders. Unlike <link url="https://xmpp.org/extensions/xep-0166.html">Jingle (XEP-0166)</link><note>XEP-0166: Jingle &lt;<link url="https://xmpp.org/extensions/xep-0166.html">https://xmpp.org/extensions/xep-0166.html</link>&gt;.</note> or even <link url="http://tools.ietf.org/html/rfc3261">SIP (RFC 3261)</link><note>RFC 3261: Session Initiation Protocol (SIP) &lt;<link url="http://tools.ietf.org/html/rfc3261">http://tools.ietf.org/html/rfc3261</link>&gt;.</note>, the remote client may or may not be a party to either the session negotiation or the media stream itself between the SFU and the call participants.</p></li>
+    <li><p>Enable chaining SFUs together using XMPP Federation in trusted environments in order to create clusters of SFUs able to support large-scale real-time. An example would be the use of <link url="https://xmpp.org/extensions/xep-0289.html">XEP-0289: Federated MUC for Constrained Environments</link><note>XEP-0289: Federated MUC for Constrained Environments &lt;<link url="https://xmpp.org/extensions/xep-0289.html">https://xmpp.org/extensions/xep-0289.html</link>&gt;.</note> to align MUC rooms with SFU conferences/groups/rooms and allowing these rooms to federate with remote counterparts. This enables users to connect to the federated SFU nearest to them on the network for a given FMUC room.
+   broadcasting.</p></li>		
   </ul> 
 </section1> 
 
-<section1 topic='Protocol' anchor='protocol'> 
+<section1 topic='WXIP Protocol' anchor='wxip-protocol'> 
+<p>While WebRTC specifies the usage of SDPs [RFC8866] and an Offer/Answer model [RFC3264] for creating connections, WebRTC does not define the precise signaling protocols over which SDPs should be exchanged [RFC8825]. In order to establish a WebRTC session between two WebRTC entities, a signaling protocol is usually used to exchange SDPs</p>
+<p>With HTTP/S applications, WHIP and WHAP have been proposed as simple protocols to ingress and egress media streams to and from an SFU respectfully. WXIP and WXAP are the XMPP equivalents</p>
+</section1> 
+
+
+<section1 topic='WXAP Protocol' anchor='wxap-protocol'> 
+</section1> 
+
+<section1 topic='SFU Direct Access Protocol' anchor='direct-access-protocol'> 
 <p>As this is a generic specification, the protocol will depend on the SFU implmentation. Most SFUs use a symmetric, asynchronous protocol. In client-server usage, some messages are only sent in the client to server or in the server to client direction.</p>   
 <p>The namespace should be in the form "urn:xmpp:sfu:xxxxx:0" where xxxxx is the name of the SFU implementation. This will enable the XMPP server to validate the JSON if needed and the client to discover the expected SFU implementation.</p>	
   <section2 topic='Client to SFU' anchor='c2s'> 
