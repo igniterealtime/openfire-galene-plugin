@@ -13,6 +13,15 @@
         <tab id="sidebar-media-services">                                                                            
             <item id="galene-summary" name="${config.page.summary}" description="${config.page.summary.description}" url="galene-summary.jsp"/>
             <item id="galene-settings" name="${config.page.settings}" description="${config.page.settings.description}" url="galene-settings.jsp"/>			
-        </tab>      
+			
+
+			<sidebar id="sidebar-groupchat-administration" >
+				<item id="muc-room-summary" >
+					<sidebar id="sidebar-groupchat-options">
+							 <item id="galene-muc" name="${config.page.sfu}"  url="galene-muc.jsp" description="${config.page.sfu.description}"/>                                       
+					</sidebar>
+				</item>
+			</sidebar>  			
+        </tab>  		
     </adminconsole> 
 </plugin>

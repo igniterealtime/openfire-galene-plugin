@@ -58,7 +58,7 @@ import org.ifsoft.websockets.*;
 import net.sf.json.*;
 import org.xmpp.packet.*;
 
-public class Galene implements Plugin, PropertyEventListener, ProcessListener
+public class Galene implements Plugin, PropertyEventListener, ProcessListener, MUCEventListener
 {
     private static final Logger Log = LoggerFactory.getLogger(Galene.class);
     private XProcess galeneThread = null;
@@ -70,12 +70,14 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
     private GaleneIQHandler galeneIQHandler;
     private RayoIQHandler rayoIQHandler;
 	private GaleneConnection adminConnection;
+    private Cache muc_properties;		
 	
     public static Galene self;	
 
     public void destroyPlugin()
     {
         PropertyEventDispatcher.removeListener(this);
+        MUCEventDispatcher.removeListener(this);		
 
         try {
 			if (adminConnection != null) adminConnection.disconnect();
@@ -98,8 +100,12 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
     }
 
     public void initializePlugin(final PluginManager manager, final File pluginDirectory)
-    {		
+    {	
+		muc_properties = CacheFactory.createLocalCache("MUC Room Properties");	
+		
         PropertyEventDispatcher.addListener(this);
+        MUCEventDispatcher.addListener(this);
+		
         checkNatives(pluginDirectory);
         executor = Executors.newCachedThreadPool();
         startJSP(pluginDirectory);
@@ -277,7 +283,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
     {
         String iniFileName = galeneHomePath + "/data/config.json";
         List<String> lines = new ArrayList<String>();
-        Log.info("Creating " + iniFileName);
+        Log.info("Creating config " + iniFileName);
 		
         // create galene global config.json file
 
@@ -301,6 +307,13 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
         {
             Log.error( "Unable to write file " + iniFileName, e );
         }
+		
+        String service = "conference";
+        List<MUCRoom> rooms = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service).getChatRooms();
+
+        for (MUCRoom room : rooms) {					
+            writeGaleneGroupFile(room.getJID());
+        }		
     }
 
     private void createAdminUser()
@@ -324,6 +337,173 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener
             }
         }
     }
+
+    // -------------------------------------------------------
+    //
+    //  MUCEventListener
+    //
+    // -------------------------------------------------------
+
+    public void roomCreated(JID roomJID)
+    {
+        MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());
+
+        if (room != null && room.isPersistent())
+        {
+
+        }
+    }
+
+    public void roomDestroyed(JID roomJID)
+    {
+
+    }
+
+    public void occupantJoined(JID roomJID, JID user, String nickname)
+    {
+
+    }
+
+    public void occupantLeft(JID roomJID, JID user, String nickname)
+    {
+
+    }
+
+	public void occupantNickKicked(JID roomJID, String nickname)
+	{
+		
+	}
+	
+    public void nicknameChanged(JID roomJID, JID user, String oldNickname, String newNickname)
+    {
+
+    }
+
+    public void messageReceived(JID roomJID, JID user, String nickname, Message message)
+    {
+
+    }
+
+    public void roomSubjectChanged(JID roomJID, JID user, String newSubject)
+    {
+
+    }
+
+    public void privateMessageRecieved(JID a, JID b, Message message)
+    {
+
+    }
+	
+	public Map<String, String> getGroupChatProperties(JID roomJID) {
+		Map<String, String> properties = (Map<String, String>) muc_properties.get(roomJID.toString());
+		
+		if (properties == null)
+		{
+			MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());			
+			
+			if (room != null) {
+				properties = new MUCRoomProperties(room.getID());
+				muc_properties.put(room.getJID().toString(), properties);
+			}
+		}
+
+        if (!properties.containsKey("galene.enabled")) properties.put("galene.enabled", "false");
+        if (!properties.containsKey("galene.federation.enabled")) properties.put("galene.federation.enabled", "false");		
+        if (!properties.containsKey("galene.owner.password")) properties.put("galene.owner.password", StringUtils.randomString(40));
+        if (!properties.containsKey("galene.admin.password")) properties.put("galene.admin.password", StringUtils.randomString(40));
+		
+		return properties;
+	}
+
+    public void writeGaleneGroupFile(JID roomJID)
+    {
+		MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());					
+        Log.debug("writeGaleneGroupFile " + roomJID + " " + room);
+
+		if (room == null) return;
+		
+        String roomName = room.getJID().getNode();
+        String password = room.getPassword();
+		Map<String, String> properties = (Map<String, String>) muc_properties.get(room.getJID().toString());		
+		if (properties == null) properties = getGroupChatProperties(roomJID);
+		
+		if (!"true".equals(properties.get("galene.enabled"))) return;		
+
+        JSONObject json = new JSONObject();
+
+        JSONArray op = new JSONArray();
+        int op_kt = 0;
+
+        JSONArray presenter = new JSONArray();
+        int presenter_kt = 0;
+
+        JSONArray other = new JSONArray();
+        int other_kt = 0;
+
+        for (JID jid : room.getOwners())
+        {
+            Log.debug("writeGaleneGroupFile owner " + jid + " " + room.getJID());
+            JSONObject owner = new JSONObject();
+            owner.put("username", jid.getNode());
+            owner.put("password", properties.get("galene.owner.password"));
+            op.put(op_kt++, owner);
+        }
+
+        json.put("op", op);
+
+        for (JID jid : room.getAdmins())
+        {
+            Log.debug("writeGaleneGroupFile admin " + jid + " " + room.getJID());
+            JSONObject admin = new JSONObject();
+            admin.put("username", jid.getNode());
+            admin.put("password", properties.get("galene.admin.password"));
+            presenter.put(presenter_kt++, admin);
+        }
+
+        if (presenter_kt == 0) presenter.put(0, new JSONObject()); // anybody is presenter
+        json.put("presenter", presenter);
+
+        for (JID jid : room.getMembers())
+        {
+            Log.debug("writeGaleneGroupFile member " + jid + " " + room.getJID());
+            JSONObject member = new JSONObject();
+            member.put("username", jid.getNode());
+
+            if (password != null && !password.isEmpty())
+            {
+                member.put("password", password);  ;
+            }
+            other.put(other_kt++, member);
+        }
+
+        if (other_kt == 0 && !room.isMembersOnly()) other.put(0, new JSONObject());  // anybody is member
+        json.put("other", other);
+
+        json.put("public", room.isPublicRoom());
+        json.put("description", room.getDescription());
+        json.put("contact", room.getName());
+        json.put("comment", room.getSubject());
+        json.put("allow-recording", room.isLogEnabled());
+        json.put("allow-anonymous", !room.isMembersOnly() && (password == null || password.isEmpty()));
+        json.put("allow-subgroups", room.canOccupantsInvite());
+        json.put("max-clients", room.getMaxUsers());
+
+        String iniFileName = galeneHomePath + "/groups/" + roomName + ".json";
+        List<String> lines = new ArrayList<String>();
+        lines.add(json.toString());
+
+        Log.info("Creating " + iniFileName);
+
+        try
+        {
+            Path file = Paths.get(iniFileName);
+            Files.write(file, lines, Charset.forName("UTF-8"));
+        }
+        catch ( Exception e )
+        {
+            Log.error( "Unable to write file " + iniFileName, e );
+        }
+    }	
 
 
     //-------------------------------------------------------
