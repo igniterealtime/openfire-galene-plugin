@@ -36,8 +36,11 @@
         String url = request.getParameter("url");     
         JiveGlobals.setProperty("galene.url", url);         
         
+        String muc_enabled = request.getParameter("muc_enabled");
+        JiveGlobals.setProperty("galene.muc.enabled", (muc_enabled != null && muc_enabled.equals("on")) ? "true": "false");     
+
         String enabled = request.getParameter("enabled");
-        JiveGlobals.setProperty("galene.enabled", (enabled != null && enabled.equals("on")) ? "true": "false");        
+        JiveGlobals.setProperty("galene.enabled", (enabled != null && enabled.equals("on")) ? "true": "false");   		
     }
 
     String service_url = plugin.getUrl();    
@@ -56,9 +59,6 @@
 <br/>
 <% } %>
 
-<p>
-    <fmt:message key="config.page.connectivity.description" />&nbsp;<a target="_blank" href="<%= service_url %>"><%= service_url %></a>
-</p> 
 <div class="jive-table">
 <form action="galene.jsp" method="post">
     <p>
@@ -75,6 +75,12 @@
                     <fmt:message key="config.page.configuration.enabled" />       
                 </td>  
             </tr>
+            <tr>
+                <td nowrap  colspan="2">
+                    <input type="checkbox" name="muc_enabled"<%= (JiveGlobals.getProperty("galene.muc.enabled", "false").equals("true")) ? " checked" : "" %>>
+                    <fmt:message key="config.page.configuration.muc.enabled" />       
+                </td>  
+            </tr>			
             <tr>
                 <td align="left" width="150">
                     <fmt:message key="config.page.configuration.username"/>

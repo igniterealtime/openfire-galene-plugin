@@ -3926,17 +3926,15 @@ window.onload = async function() {
 
 	const url = (window.location.protocol == "https:" ? "wss:" : "ws:") + '//' + window.location.host + "/ws/";
 	const username = urlParam("username");
-    const jid = username + "@localhost";
-    const password = "Welcome123";
 	
-	group = "public/" + urlParam("group");	
+	group = urlParam("group");	
 	setTitle(capitalise(group));
     addFilters();
     setMediaChoices(false).then(e => reflectSettings());	
 
     const connection = new Strophe.Connection(url);
 	
-    connection.connect(jid, password, async (status) => {
+    connection.connect(location.hostname, null, async (status) => {
         console.debug("XMPPConnection.connect", status);
 
         if (status === Strophe.Status.CONNECTED) {

@@ -22,7 +22,7 @@
         }
     }
 	
-    if (update) { 	
+    if (update && properties != null) { 	
         String enabled = request.getParameter("enabled");
         String federationEnabled = request.getParameter("federationEnabled");
 		
@@ -31,6 +31,9 @@
 		
 		plugin.writeGaleneGroupFile(roomJID);
 	}
+	
+	String groupName = roomJID.getNode();
+	String service_url = plugin.getUrl() + "/galene/video/?username=admin&group=" + groupName;   
 %>
 
 
@@ -50,18 +53,18 @@
 <% } %>
 
 <form action="galene-muc.jsp" method="get">
-<div class='jive-contentBoxHeader'><fmt:message key="config.page.sfu.for" /><%= " " + roomJID  %></div>		
+<div class='jive-contentBoxHeader'><a target="_blank" href="<%= service_url %>"><%= roomJID.toBareJID() %></a></div>		
 <div class='jive-contentBox'>
 <table cellpadding="0" cellspacing="0" border="0" width="100%">
 	<tr>
 		<td nowrap  colspan="2">
-			<input type="checkbox" name="enabled"<%= (properties.get("galene.enabled").equals("true")) ? " checked" : "" %>>
+			<input type="checkbox" name="enabled"<%= (properties != null && properties.get("galene.enabled").equals("true")) ? " checked" : "" %>>
 			<fmt:message key="config.page.configuration.enabled" />       
 		</td>  
 	</tr>
 	<tr>
 		<td nowrap  colspan="2">
-			<input type="checkbox" name="federationEnabled"<%= (properties.get("galene.federation.enabled").equals("true")) ? " checked" : "" %>>
+			<input type="checkbox" name="federationEnabled"<%= (properties != null && properties.get("galene.federation.enabled").equals("true")) ? " checked" : "" %>>
 			<fmt:message key="config.page.enable.federation" />       
 		</td>  
 	</tr>	

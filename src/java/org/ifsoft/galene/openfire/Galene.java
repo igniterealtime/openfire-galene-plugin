@@ -307,13 +307,15 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         {
             Log.error( "Unable to write file " + iniFileName, e );
         }
-		
-        String service = "conference";
-        List<MUCRoom> rooms = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service).getChatRooms();
 
-        for (MUCRoom room : rooms) {					
-            writeGaleneGroupFile(room.getJID());
-        }		
+		if (JiveGlobals.getBooleanProperty("galene.enabled", false)) {
+			String service = "conference";
+			List<MUCRoom> rooms = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service).getChatRooms();
+
+			for (MUCRoom room : rooms) {					
+				writeGaleneGroupFile(room.getJID());
+			}	
+		}			
     }
 
     private void createAdminUser()
@@ -395,22 +397,25 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     }
 	
 	public Map<String, String> getGroupChatProperties(JID roomJID) {
-		Map<String, String> properties = (Map<String, String>) muc_properties.get(roomJID.toString());
+		Map<String, String> properties = null;
 		
-		if (properties == null)
-		{
-			MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());			
+		if (JiveGlobals.getBooleanProperty("galene.enabled", false)) {
+			properties = (Map<String, String>) muc_properties.get(roomJID.toString());
 			
-			if (room != null) {
-				properties = new MUCRoomProperties(room.getID());
-				muc_properties.put(room.getJID().toString(), properties);
+			if (properties == null) {
+				MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());			
+				
+				if (room != null) {
+					properties = new MUCRoomProperties(room.getID());
+					muc_properties.put(room.getJID().toString(), properties);
+				}
 			}
-		}
 
-        if (!properties.containsKey("galene.enabled")) properties.put("galene.enabled", "false");
-        if (!properties.containsKey("galene.federation.enabled")) properties.put("galene.federation.enabled", "false");		
-        if (!properties.containsKey("galene.owner.password")) properties.put("galene.owner.password", StringUtils.randomString(40));
-        if (!properties.containsKey("galene.admin.password")) properties.put("galene.admin.password", StringUtils.randomString(40));
+			if (!properties.containsKey("galene.enabled")) properties.put("galene.enabled", "false");
+			if (!properties.containsKey("galene.federation.enabled")) properties.put("galene.federation.enabled", "false");		
+			if (!properties.containsKey("galene.owner.password")) properties.put("galene.owner.password", StringUtils.randomString(40));
+			if (!properties.containsKey("galene.admin.password")) properties.put("galene.admin.password", StringUtils.randomString(40));
+		}
 		
 		return properties;
 	}
