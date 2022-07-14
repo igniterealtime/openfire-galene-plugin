@@ -12,7 +12,11 @@ copy galene.jar to the plugins folder
 
 # How to use
 
-This plugin implements [XEP-XXXX: In-Band SFU Sessions](https://igniterealtime.github.io/openfire-galene-plugin/xep/xep-xxx-sfu_01-01.xml) for the Galene SFU
+This plugin implements [XEP-XXXX: In-Band SFU Sessions](https://igniterealtime.github.io/openfire-galene-plugin/xep/xep-xxx-sfu_01-01.xml) for the Galene SFU. 
+
+For an example client, see the [galene plugin for conversejs](https://github.com/conversejs/community-plugins/tree/master/packages/galene)
+
+<img src="https://github.com/conversejs/community-plugins/blob/master/packages/galene/galene.png?raw=true" />
 
 # Further information
 
