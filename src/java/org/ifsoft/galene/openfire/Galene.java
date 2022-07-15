@@ -308,7 +308,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
             Log.error( "Unable to write file " + iniFileName, e );
         }
 
-		if (JiveGlobals.getBooleanProperty("galene.enabled", false)) {
+		if (JiveGlobals.getBooleanProperty("galene.muc.enabled", false)) {
 			String service = "conference";
 			List<MUCRoom> rooms = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service).getChatRooms();
 

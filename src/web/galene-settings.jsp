@@ -60,7 +60,7 @@
 <% } %>
 
 <div class="jive-table">
-<form action="galene.jsp" method="post">
+<form action="galene-settings.jsp" method="post">
     <p>
         <table class="jive-table" cellpadding="0" cellspacing="0" border="0" width="100%">
             <thead> 
