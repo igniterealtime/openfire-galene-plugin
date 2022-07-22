@@ -18,6 +18,10 @@ For an example client, see the [galene plugin for conversejs](https://github.com
 
 <img src="https://github.com/conversejs/community-plugins/blob/master/packages/galene/galene.png?raw=true" />
 
+Also see the [Gitea plugin for Openfire](https://github.com/igniterealtime/openfire-zgitea-plugin)
+
+![image](https://user-images.githubusercontent.com/110731/180422009-3ef9255b-0f27-4b93-b06a-f250aeaf69c1.png)
+
 # Further information
 
 Galène's web page is at <https://galene.org> and was created by Juliusz Chroboczek <https://www.irif.fr/~jch/>
