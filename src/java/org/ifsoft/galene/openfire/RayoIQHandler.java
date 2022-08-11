@@ -12,6 +12,7 @@ import org.jivesoftware.openfire.session.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.xmpp.packet.Presence;
 import org.xmpp.packet.IQ;
 import org.xmpp.packet.JID;
 import org.xmpp.packet.PacketError;
@@ -36,6 +37,8 @@ public class RayoIQHandler {
     private static final String RAYO_RECORD = "urn:xmpp:rayo:record:1";
     private static final String RAYO_SAY 	= "urn:xmpp:tropo:say:1";
     private static final String RAYO_HANDSET = "urn:xmpp:rayo:handset:1";
+    private static final String ID = "id";
+    private static final String URI = "uri";	
 	
     private RayoProvider rayoProvider = null;
     private RecordProvider recordProvider = null;
@@ -111,6 +114,11 @@ public class RayoIQHandler {
 
 	public void stopHandler() {
 		XMPPServer server = XMPPServer.getInstance();
+		
+        server.getIQDiscoInfoHandler().removeServerFeature(RAYO_CORE);
+        server.getIQDiscoInfoHandler().removeServerFeature(RAYO_RECORD);
+        server.getIQDiscoInfoHandler().removeServerFeature(RAYO_SAY);
+        server.getIQDiscoInfoHandler().removeServerFeature(RAYO_HANDSET);		
 
 		if (onHookIQHandler != null) {server.getIQRouter().removeHandler(onHookIQHandler); onHookIQHandler = null;}
 		if (offHookIQHandler != null) {server.getIQRouter().removeHandler(offHookIQHandler); offHookIQHandler = null;}
@@ -638,11 +646,86 @@ public class RayoIQHandler {
 		Map<String, String> headers = command.getHeaders();
 		String from = command.getFrom().toString();
 		String to = command.getTo().toString();
+		
+		boolean fromXmpp = from.indexOf("xmpp:") == 0;
+		boolean toXmpp = to.indexOf("xmpp:") == 0;	
 
+		JoinCommand join = command.getJoin();
+
+        if (join != null || !toXmpp || !fromXmpp) {
+			reply.setError(PacketError.Condition.feature_not_implemented);
+			return reply;			
+        }	
+
+		String callerName = headers.get("caller_name");
+		String calledName = headers.get("called_name");	
+
+		if (callerName == null) {
+			callerName =  from.substring(5);
+			headers.put("caller_name", callerName);
+		}
+
+		if (calledName == null) {
+			calledName =  to.substring(5);
+			headers.put("called_name", calledName);
+		}	
+
+		JID source = getJID(from.substring(5));		
+		JID destination = getJID(to.substring(5));	
+		
+		if (destination == null || source == null) {
+			reply.setError(PacketError.Condition.item_not_found);
+			return reply;
+		}
+
+		String callId = java.util.UUID.randomUUID().toString();
+
+		Presence presence = new Presence();
+		presence.setFrom(callId + "@" + getHostname());
+		presence.setTo(destination);
+
+		OfferEvent offer = new OfferEvent(null);
+
+		try {
+			offer.setFrom(new URI(from));
+			offer.setTo(new URI(to));
+
+		} catch (URISyntaxException e) {
+			reply.setError(PacketError.Condition.feature_not_implemented);
+			return reply;
+		}
+
+		offer.setHeaders(headers);
+
+		final Element childElement = reply.setChildElement("ref", RAYO_CORE);
+		childElement.addAttribute(URI, (String) "xmpp:" + callId + "@" + getHostname());
+		childElement.addAttribute(ID, (String)  callId);		
+
+		presence.getElement().add(rayoProvider.toXML(offer));
+		XMPPServer.getInstance().getPresenceRouter().route(presence);	
 		return reply;
 	}
+	
+	private JID getJID(String jid)
+	{
+		if (jid != null) {
+			jid = JID.unescapeNode(jid);
 
-		
+			if (jid.indexOf("@") == -1 || jid.indexOf("/") == -1) return null;
+
+			try {
+				return new JID(jid);
+
+			} catch (Exception e) {
+				return null;
+			}
+
+		} else return null;
+	}
+
+    private String getHostname() {
+        return XMPPServer.getInstance().getServerInfo().getHostname();
+    }		
 }
 
 
