@@ -6,7 +6,7 @@
   <abstract>This specification defines a protocol extension for communicating in-band with a media selective forwarding unit (SFU) over XMPP
   </abstract>
 
-  <number>XXXX</number> 
+  <number>0000</number> 
   <status>ProtoXEP</status> 
   <type>Standards Track</type> 
   <sig>Standards</sig> 
