@@ -13,6 +13,7 @@
 <% webManager.init(request, response, session, application, out ); %>
 
 <% 
+    Galene plugin = Galene.self;
 	JSONArray connections = new JSONArray();
 	String json = Galene.self.getJson("/stats.json");
 	
@@ -28,6 +29,14 @@
         <meta name="pageID" content="galene-summary"/>
     </head>
     <body>
+
+<%
+		String service_url = plugin.getUrl(); 
+		String url = JiveGlobals.getProperty("galene.url", service_url) + "/galene/?group=lobby&username=admin";
+%>	
+	<div>
+		<p><fmt:message key="galene.client.url.desc" /><%=  "<a target='_blank' href='" + url + "'>" + url + "</a>"  %></p>
+	</div>
 
 <% if (request.getParameter("deletesuccess") != null) { %>
 
