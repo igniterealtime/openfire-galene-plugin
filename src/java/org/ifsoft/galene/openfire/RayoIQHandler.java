@@ -404,7 +404,7 @@ public class RayoIQHandler {
 					reply = handleAnswerCommand((AnswerCommand) object, iq);
 
 				} else if (object instanceof HangupCommand) {
-					reply = handleHangupCommand(iq);
+					reply = handleHangupCommand((HangupCommand) object, iq);
 
 				} else if (object instanceof RejectCommand) {
 						// implemented as hangup on client
@@ -570,46 +570,7 @@ public class RayoIQHandler {
 		IQ reply = IQ.createResultIQ(iq);
 		
 		return reply;
-	}	
-
-	private IQ handleAcceptCommand(AcceptCommand command, IQ iq)
-	{
-		Map<String, String> headers = command.getHeaders();
-
-		String callId = iq.getTo().getNode();	// destination JID escaped
-		String callerId = headers.get("caller_id"); // source JID
-		String mixer = headers.get("mixer_name");
-
-		Log.info("RayoComponent handleAcceptCommand " + callerId + " " + callId + " " + mixer);
-
-		IQ reply = IQ.createResultIQ(iq);	
-		
-		return reply;
-	}
-
-	private IQ handleAnswerCommand(AnswerCommand command, IQ iq)
-	{
-		Map<String, String> headers = command.getHeaders();
-
-		IQ reply = IQ.createResultIQ(iq);
-
-		String callId = iq.getTo().getNode(); // destination JID escaped
-		String callerId = headers.get("caller_id"); // source JID
-
-		Log.info("RayoComponent AnswerCommand " + callerId + " " + callId);	
-		
-		return reply;
-	}	
-
-	private IQ handleHangupCommand(IQ iq)
-	{
-		String callId = iq.getTo().getNode();
-		Log.info("RayoComponent handleHangupCommand " + iq.getFrom() + " " + callId);
-
-		IQ reply = IQ.createResultIQ(iq);
-
-		return reply;
-	}	
+	}			
 
 	private IQ handleDtmfCommand(DtmfCommand command, IQ iq)
 	{
@@ -636,10 +597,105 @@ public class RayoIQHandler {
 
 		return reply;
 	}
+	
+	private IQ handleHangupCommand(HangupCommand command, IQ iq)
+	{
+		Map<String, String> headers = command.getHeaders();	
+		IQ reply = IQ.createResultIQ(iq);
+		
+		String callId = iq.getTo().getNode();
+		String callerId = headers.get("caller_id");
+		String calledId = headers.get("called_id"); 			
+		Log.info("RayoComponent handleHangupCommand " + iq.getFrom() + " " + callerId  + " " + calledId + " " + callId);			
+
+		JID source = getJID(callerId);			
+		JID destination = getJID(calledId);			
+		
+		if (destination == null || source == null) {
+			reply.setError(PacketError.Condition.item_not_found);
+			return reply;
+		}		
+		
+		Presence presFrom = new Presence();
+		presFrom.setFrom(callId + "@" + getHostname());
+		presFrom.setTo(source);		
+		EndEvent ended = new EndEvent(callId, headers);
+		presFrom.getElement().add(rayoProvider.toXML(ended));
+		XMPPServer.getInstance().getPresenceRouter().route(presFrom);	
+		
+		Presence presTo = new Presence();
+		presTo.setFrom(callId + "@" + getHostname());
+		presTo.setTo(destination);
+		presTo.getElement().add(rayoProvider.toXML(ended));
+		XMPPServer.getInstance().getPresenceRouter().route(presTo);			
+		return reply;
+	}	
+	
+	private IQ handleAnswerCommand(AnswerCommand command, IQ iq)
+	{
+		Map<String, String> headers = command.getHeaders();
+		IQ reply = IQ.createResultIQ(iq);
+
+		String callId = iq.getTo().getNode(); 
+		String callerId = headers.get("caller_id"); 
+		String calledId = headers.get("called_id"); 		
+		Log.info("RayoComponent AnswerCommand " + iq.getFrom() + " " + callerId + " " + callId);			
+		
+		JID source = getJID(callerId);
+		JID destination = getJID(calledId);			
+		
+		if (destination == null || source == null) {
+			reply.setError(PacketError.Condition.item_not_found);
+			return reply;
+		}		
+		
+		Presence presFrom = new Presence();
+		presFrom.setFrom(callId + "@" + getHostname());
+		presFrom.setTo(source);
+		
+		AnsweredEvent answered = new AnsweredEvent(callId, headers);
+		presFrom.getElement().add(rayoProvider.toXML(answered));
+		XMPPServer.getInstance().getPresenceRouter().route(presFrom);	
+
+		Presence presTo = new Presence();
+		presTo.setFrom(callId + "@" + getHostname());
+		presTo.setTo(destination);
+		presTo.getElement().add(rayoProvider.toXML(answered));
+		XMPPServer.getInstance().getPresenceRouter().route(presTo);			
+		return reply;
+	}
+
+	private IQ handleAcceptCommand(AcceptCommand command, IQ iq)
+	{
+		Map<String, String> headers = command.getHeaders();
+		IQ reply = IQ.createResultIQ(iq);		
+
+		String callId = iq.getTo().getNode();	
+		String calledId = headers.get("called_id"); 
+		String calleeId = headers.get("callee_id"); 		
+		Log.info("RayoComponent handleAcceptCommand " + iq.getFrom() + " " + calledId + " " + calleeId + " " + callId);
+
+		JID destination = getJID(calledId);			
+		JID owner = getJID(calleeId);			
+		
+		if (destination == null || owner == null) {
+			reply.setError(PacketError.Condition.item_not_found);
+			return reply;
+		}			
+		
+		Presence presTo = new Presence();
+		presTo.setFrom(callId + "@" + getHostname());
+		presTo.setTo(destination);
+		RingingEvent ringing = new RingingEvent(callId, headers);		
+		presTo.getElement().add(rayoProvider.toXML(ringing));
+		XMPPServer.getInstance().getPresenceRouter().route(presTo);		
+		
+		return reply;
+	}	
 
 	private IQ handleDialCommand(DialCommand command, IQ iq, boolean transferCall)
 	{
-		Log.info("RayoComponent handleHandsetDialCommand " + iq.getFrom());
+		Log.info("RayoComponent handleDialCommand " + iq.getFrom());
 
         IQ reply = IQ.createResultIQ(iq);
 
@@ -656,20 +712,7 @@ public class RayoIQHandler {
 			reply.setError(PacketError.Condition.feature_not_implemented);
 			return reply;			
         }	
-
-		String callerName = headers.get("caller_name");
-		String calledName = headers.get("called_name");	
-
-		if (callerName == null) {
-			callerName =  from.substring(5);
-			headers.put("caller_name", callerName);
-		}
-
-		if (calledName == null) {
-			calledName =  to.substring(5);
-			headers.put("called_name", calledName);
-		}	
-
+			
 		JID source = getJID(from.substring(5));		
 		JID destination = getJID(to.substring(5));	
 		
@@ -678,13 +721,27 @@ public class RayoIQHandler {
 			return reply;
 		}
 
+		String callerId = from.substring(5);
+		String calledId = to.substring(5);			
+
+		String callerName = headers.get("caller_name");
+		if (callerName == null) callerName =  callerId;
+
+		String calledName = headers.get("called_name");	
+		if (calledName == null) calledName =  calledId;		
+		
+		headers.put("caller_id", callerId);	
+		headers.put("called_id", calledId);
+		headers.put("caller_name", callerName);
+		headers.put("called_name", calledName);			
+
 		String callId = java.util.UUID.randomUUID().toString();
 
-		Presence presence = new Presence();
-		presence.setFrom(callId + "@" + getHostname());
-		presence.setTo(destination);
+		Presence presTo = new Presence();
+		presTo.setFrom(callId + "@" + getHostname());
+		presTo.setTo(destination);
 
-		OfferEvent offer = new OfferEvent(null);
+		OfferEvent offer = new OfferEvent(callId);
 
 		try {
 			offer.setFrom(new URI(from));
@@ -694,15 +751,22 @@ public class RayoIQHandler {
 			reply.setError(PacketError.Condition.feature_not_implemented);
 			return reply;
 		}
-
 		offer.setHeaders(headers);
+		presTo.getElement().add(rayoProvider.toXML(offer));
+		XMPPServer.getInstance().getPresenceRouter().route(presTo);
+		
+		Presence presFrom = new Presence();
+		presFrom.setFrom(callId + "@" + getHostname());
+		presFrom.setTo(source);
+		
+		RingingEvent ringing = new RingingEvent(callId);
+		ringing.setHeaders(headers);
+		presFrom.getElement().add(rayoProvider.toXML(ringing));
+		XMPPServer.getInstance().getPresenceRouter().route(presFrom);		
 
 		final Element childElement = reply.setChildElement("ref", RAYO_CORE);
 		childElement.addAttribute(URI, (String) "xmpp:" + callId + "@" + getHostname());
-		childElement.addAttribute(ID, (String)  callId);		
-
-		presence.getElement().add(rayoProvider.toXML(offer));
-		XMPPServer.getInstance().getPresenceRouter().route(presence);	
+		childElement.addAttribute(ID, (String)  callId);			
 		return reply;
 	}
 	
@@ -711,7 +775,7 @@ public class RayoIQHandler {
 		if (jid != null) {
 			jid = JID.unescapeNode(jid);
 
-			if (jid.indexOf("@") == -1 || jid.indexOf("/") == -1) return null;
+			if (jid.indexOf("@") == -1 && jid.indexOf("/") == -1) return null;
 
 			try {
 				return new JID(jid);
