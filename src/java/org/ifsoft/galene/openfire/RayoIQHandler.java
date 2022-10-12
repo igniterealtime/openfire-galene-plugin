@@ -9,6 +9,8 @@ import org.jivesoftware.util.cache.Cache;
 import org.jivesoftware.util.cache.CacheFactory;
 import org.jivesoftware.openfire.session.ClientSession;
 import org.jivesoftware.openfire.session.Session;
+import org.jivesoftware.openfire.muc.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -621,13 +623,13 @@ public class RayoIQHandler {
 		presFrom.setTo(source);		
 		EndEvent ended = new EndEvent(callId, headers);
 		presFrom.getElement().add(rayoProvider.toXML(ended));
-		XMPPServer.getInstance().getPresenceRouter().route(presFrom);	
+		sendRayoEvent(presFrom);	
 		
 		Presence presTo = new Presence();
 		presTo.setFrom(callId + "@" + getHostname());
 		presTo.setTo(destination);
 		presTo.getElement().add(rayoProvider.toXML(ended));
-		XMPPServer.getInstance().getPresenceRouter().route(presTo);			
+		sendRayoEvent(presTo);			
 		return reply;
 	}	
 	
@@ -655,13 +657,13 @@ public class RayoIQHandler {
 		
 		AnsweredEvent answered = new AnsweredEvent(callId, headers);
 		presFrom.getElement().add(rayoProvider.toXML(answered));
-		XMPPServer.getInstance().getPresenceRouter().route(presFrom);	
+		sendRayoEvent(presFrom);	
 
 		Presence presTo = new Presence();
 		presTo.setFrom(callId + "@" + getHostname());
 		presTo.setTo(destination);
 		presTo.getElement().add(rayoProvider.toXML(answered));
-		XMPPServer.getInstance().getPresenceRouter().route(presTo);			
+		sendRayoEvent(presTo);			
 		return reply;
 	}
 
@@ -688,7 +690,7 @@ public class RayoIQHandler {
 		presTo.setTo(destination);
 		RingingEvent ringing = new RingingEvent(callId, headers);		
 		presTo.getElement().add(rayoProvider.toXML(ringing));
-		XMPPServer.getInstance().getPresenceRouter().route(presTo);		
+		sendRayoEvent(presTo);		
 		
 		return reply;
 	}	
@@ -753,7 +755,7 @@ public class RayoIQHandler {
 		}
 		offer.setHeaders(headers);
 		presTo.getElement().add(rayoProvider.toXML(offer));
-		XMPPServer.getInstance().getPresenceRouter().route(presTo);
+		sendRayoEvent(presTo);
 		
 		Presence presFrom = new Presence();
 		presFrom.setFrom(callId + "@" + getHostname());
@@ -762,7 +764,7 @@ public class RayoIQHandler {
 		RingingEvent ringing = new RingingEvent(callId);
 		ringing.setHeaders(headers);
 		presFrom.getElement().add(rayoProvider.toXML(ringing));
-		XMPPServer.getInstance().getPresenceRouter().route(presFrom);		
+		sendRayoEvent(presFrom);		
 
 		final Element childElement = reply.setChildElement("ref", RAYO_CORE);
 		childElement.addAttribute(URI, (String) "xmpp:" + callId + "@" + getHostname());
@@ -789,7 +791,35 @@ public class RayoIQHandler {
 
     private String getHostname() {
         return XMPPServer.getInstance().getServerInfo().getHostname();
-    }		
+    }
+
+	private void sendRayoEvent(Presence event) {	
+		boolean groupChat = false;
+		
+		try {
+			for ( MultiUserChatService mucService : XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatServices() )
+			{
+				MUCRoom room = mucService.getChatRoom(event.getTo().getNode());
+
+				if (room != null) {
+					groupChat = true;
+					
+					for (MUCRole role : room.getParticipants()) {
+						Log.info("RayoComponent sendRayoEvent - " + role.getUserAddress());
+						event.setTo(role.getUserAddress());
+						XMPPServer.getInstance().getPresenceRouter().route(event);						
+					}
+				}
+
+			}
+		} catch (Exception e) {
+			Log.error("sendRayoEvent", e);
+		}
+
+		if (!groupChat) {
+			XMPPServer.getInstance().getPresenceRouter().route(event);	
+		}
+	}
 }
 
 
