@@ -3617,7 +3617,7 @@ async function handleConnection() {
 		
 	} else {
 		standalone = true;
-		connection = new Strophe.Connection(location.protocol + "//" + location.host + "/http-bind/");
+		connection = new Strophe.Connection((location.protocol == "https:" ? "wss:" : "ws:") + "//" + location.host + "/ws/");
 		
 		connection.connect(host, null, async function (status) {
 			console.debug("onload xmpp.connect", status);
