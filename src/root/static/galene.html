@@ -105,9 +105,11 @@
                     <label for="username">Username</label>
                     <input id="username" type="text" name="username"
                            autocomplete="username" class="form-control"/>
-                    <label for="password">Password</label>
-                    <input id="password" type="password" name="password"
-                           autocomplete="current-password" class="form-control"/>
+                    <div id="passwordform">
+                      <label for="password">Password</label>
+                      <input id="password" type="password" name="password"
+                             autocomplete="current-password" class="form-control"/>
+                    </div>
                     <label>Enable at start:</label>
                     <div class="present-switch">
                       <p class="switch-radio">
@@ -230,9 +232,8 @@
             <select id="requestselect" class="select select-inline">
               <option value="">nothing</option>
               <option value="audio">audio only</option>
-              <option value="screenshare-low">screen share (low)</option>
-              <option value="screenshare">screen share</option>
-              <option value="everything-low">everything (low)</option>
+              <option value="screenshare">screenshare only</option>
+              <option value="everything-low">low quality</option>
               <option value="everything" selected>everything</option>
             </select>
           </form>
@@ -279,6 +280,21 @@
         </div>
       </div>
     </div>
+
+    <dialog id="invite-dialog">
+      <form method="dialog">
+        <label for="invite-username">Username (optional):</label>
+        <input id="invite-username" type="text"/>
+        <br>
+        <label for="invite-not-before">Not before:</label>
+        <input id="invite-not-before" type="datetime-local"/>
+        <br>
+        <label for="invite-expires">Expires:</label>
+        <input id="invite-expires" type="datetime-local"/>
+        <br>
+        <button id="invite-cancel" value="cancel" type="button">Cancel</button>
+        <button value="invite" value="invite">Invite</button>
+    </dialog>
 
     <script src="/protocol.js" defer></script>
     <script src="/external/toastify/toastify.js" defer></script>
