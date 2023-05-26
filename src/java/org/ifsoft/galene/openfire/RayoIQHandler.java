@@ -600,8 +600,7 @@ public class RayoIQHandler {
 		return reply;
 	}
 	
-	private IQ handleHangupCommand(HangupCommand command, IQ iq)
-	{
+	private IQ handleHangupCommand(HangupCommand command, IQ iq) {
 		Map<String, String> headers = command.getHeaders();	
 		IQ reply = IQ.createResultIQ(iq);
 		
@@ -633,8 +632,7 @@ public class RayoIQHandler {
 		return reply;
 	}	
 	
-	private IQ handleAnswerCommand(AnswerCommand command, IQ iq)
-	{
+	private IQ handleAnswerCommand(AnswerCommand command, IQ iq) {
 		Map<String, String> headers = command.getHeaders();
 		IQ reply = IQ.createResultIQ(iq);
 
@@ -667,8 +665,7 @@ public class RayoIQHandler {
 		return reply;
 	}
 
-	private IQ handleAcceptCommand(AcceptCommand command, IQ iq)
-	{
+	private IQ handleAcceptCommand(AcceptCommand command, IQ iq) {
 		Map<String, String> headers = command.getHeaders();
 		IQ reply = IQ.createResultIQ(iq);		
 
@@ -695,8 +692,7 @@ public class RayoIQHandler {
 		return reply;
 	}	
 
-	private IQ handleDialCommand(DialCommand command, IQ iq, boolean transferCall)
-	{
+	private IQ handleDialCommand(DialCommand command, IQ iq, boolean transferCall) 	{
 		Log.info("RayoComponent handleDialCommand " + iq.getFrom());
 
         IQ reply = IQ.createResultIQ(iq);
@@ -772,8 +768,7 @@ public class RayoIQHandler {
 		return reply;
 	}
 	
-	private JID getJID(String jid)
-	{
+	private JID getJID(String jid) 	{
 		if (jid != null) {
 			jid = JID.unescapeNode(jid);
 
