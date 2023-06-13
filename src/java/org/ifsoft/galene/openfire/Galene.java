@@ -348,12 +348,13 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
     public void roomCreated(JID roomJID)
     {
-        MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());
+		if (JiveGlobals.getBooleanProperty("galene.muc.enabled", false)) {		
+			MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());
 
-        if (room != null && room.isPersistent())
-        {
-
-        }
+			if (room != null && room.isPersistent()) {
+				writeGaleneGroupFile(room.getJID());
+			}
+		}
     }
 
     public void roomDestroyed(JID roomJID)
