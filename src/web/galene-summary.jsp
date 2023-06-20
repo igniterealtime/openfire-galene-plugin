@@ -32,7 +32,7 @@
 
 <%
 		String service_url = plugin.getUrl(); 
-		String url = JiveGlobals.getProperty("galene.url", service_url) + "/galene/?group=lobby&username=admin";
+		String url = JiveGlobals.getProperty("galene.url", service_url) + "/galene/?room=public&username=admin";
 %>	
 	<div>
 		<p><fmt:message key="galene.client.url.desc" /><%=  "<a target='_blank' href='" + url + "'>" + url + "</a>"  %></p>

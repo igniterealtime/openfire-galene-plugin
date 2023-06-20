@@ -279,7 +279,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         Log.info("checkNatives galene executable path " + path);
     }
 
-    private void setupGaleneFiles()
+    public void setupGaleneFiles()
     {
         String iniFileName = galeneHomePath + "/data/config.json";
         List<String> lines = new ArrayList<String>();
@@ -295,11 +295,16 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		admin.put("password", JiveGlobals.getProperty("galene.password", "administrator"));	
 		admins.put(0, admin);
 		json.put("admin", admins);
+		//json.put("proxyURL",  JiveGlobals.getProperty("galene.url", "http://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + getPort()));		
 		
 		lines.add(json.toString());
 
         try
         {
+			File fil = new File(iniFileName);
+			fil.setReadable(true, true);
+			fil.setWritable(true, true);	
+			
             Path file = Paths.get(iniFileName);
             Files.write(file, lines, Charset.forName("UTF-8"));
         }
@@ -427,63 +432,89 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         Log.debug("writeGaleneGroupFile " + roomJID + " " + room);
 
 		if (room == null) return;
+
+        JSONObject json = new JSONObject();
 		
         String roomName = room.getJID().getNode();
         String password = room.getPassword();
 		Map<String, String> properties = (Map<String, String>) muc_properties.get(room.getJID().toString());		
 		if (properties == null) properties = getGroupChatProperties(roomJID);
 		
-		if (!"true".equals(properties.get("galene.enabled"))) return;		
+		if ("true".equals(properties.get("galene.enabled"))) {	
+			JSONArray op = new JSONArray();
+			int op_kt = 0;
 
-        JSONObject json = new JSONObject();
+			JSONArray presenter = new JSONArray();
+			int presenter_kt = 0;
 
-        JSONArray op = new JSONArray();
-        int op_kt = 0;
+			JSONArray other = new JSONArray();
+			int other_kt = 0;
 
-        JSONArray presenter = new JSONArray();
-        int presenter_kt = 0;
+			for (JID jid : room.getOwners())
+			{
+				Log.debug("writeGaleneGroupFile owner " + jid + " " + room.getJID());
+				String pass = properties.get("galene.owner.password");
+				
+				if (pass != null) {
+					JSONObject owner = new JSONObject();				
+					owner.put("username", jid.getNode());
+					owner.put("password", pass);
+					op.put(op_kt++, owner);
+				}
+			}
 
-        JSONArray other = new JSONArray();
-        int other_kt = 0;
+			json.put("op", op);
 
-        for (JID jid : room.getOwners())
-        {
-            Log.debug("writeGaleneGroupFile owner " + jid + " " + room.getJID());
-            JSONObject owner = new JSONObject();
-            owner.put("username", jid.getNode());
-            owner.put("password", properties.get("galene.owner.password"));
-            op.put(op_kt++, owner);
-        }
+			for (JID jid : room.getAdmins())
+			{
+				Log.debug("writeGaleneGroupFile admin " + jid + " " + room.getJID());
+				String pass = properties.get("galene.admin.password");
+				
+				if (pass != null) {			
+					JSONObject admin = new JSONObject();
+					admin.put("username", jid.getNode());
+					admin.put("password", pass);
+					presenter.put(presenter_kt++, admin);
+				}
+			}
 
-        json.put("op", op);
+			if (presenter_kt == 0) presenter.put(0, new JSONObject()); // anybody is presenter
+			json.put("presenter", presenter);
 
-        for (JID jid : room.getAdmins())
-        {
-            Log.debug("writeGaleneGroupFile admin " + jid + " " + room.getJID());
-            JSONObject admin = new JSONObject();
-            admin.put("username", jid.getNode());
-            admin.put("password", properties.get("galene.admin.password"));
-            presenter.put(presenter_kt++, admin);
-        }
+			for (JID jid : room.getMembers())
+			{
+				Log.debug("writeGaleneGroupFile member " + jid + " " + room.getJID());
+				JSONObject member = new JSONObject();
+				member.put("username", jid.getNode());
 
-        if (presenter_kt == 0) presenter.put(0, new JSONObject()); // anybody is presenter
-        json.put("presenter", presenter);
+				if (password != null && !password.isEmpty()) {
+					member.put("password", password);  ;
+				}
+				other.put(other_kt++, member);
+			}
 
-        for (JID jid : room.getMembers())
-        {
-            Log.debug("writeGaleneGroupFile member " + jid + " " + room.getJID());
-            JSONObject member = new JSONObject();
-            member.put("username", jid.getNode());
-
-            if (password != null && !password.isEmpty())
-            {
-                member.put("password", password);  ;
-            }
-            other.put(other_kt++, member);
-        }
-
-        if (other_kt == 0 && !room.isMembersOnly()) other.put(0, new JSONObject());  // anybody is member
-        json.put("other", other);
+			if (other_kt == 0 && !room.isMembersOnly()) other.put(0, new JSONObject());  // anybody is member
+			json.put("other", other);
+		
+		} else {	// use openfire as a auth sever
+		
+			if (!room.isMembersOnly() && (password == null || password.isEmpty())) {
+				JSONArray other = new JSONArray();
+				other.put(0, new JSONObject());  // anybody is member
+				json.put("other", other);		
+			}
+			
+			JSONArray authKeys = new JSONArray();	
+			JSONObject authKey = new JSONObject();
+			authKey.put("kty", "oct");
+			authKey.put("alg", "HS256");
+			authKey.put("k", JWebToken.SECRET_KEY);
+			authKey.put("kid", "0");		
+			authKeys.put(0, authKey);
+			
+			json.put("authKeys", authKeys);				
+			json.put("authServer", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/galene/auth-server");								
+		}
 
         json.put("public", room.isPublicRoom());
         json.put("description", room.getDescription());
@@ -492,8 +523,9 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         json.put("allow-recording", room.isLogEnabled());
         json.put("allow-anonymous", !room.isMembersOnly() && (password == null || password.isEmpty()));
         json.put("allow-subgroups", room.canOccupantsInvite());
+		json.put("unrestricted-tokens", room.canOccupantsInvite());
         json.put("max-clients", room.getMaxUsers());
-
+		
         String iniFileName = galeneHomePath + "/groups/" + roomName + ".json";
         List<String> lines = new ArrayList<String>();
         lines.add(json.toString());
@@ -502,6 +534,10 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
         try
         {
+			File fil = new File(iniFileName);
+			fil.setReadable(true, true);
+			fil.setWritable(true, true);	
+			
             Path file = Paths.get(iniFileName);
             Files.write(file, lines, Charset.forName("UTF-8"));
         }

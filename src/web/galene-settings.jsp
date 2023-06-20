@@ -40,7 +40,9 @@
         JiveGlobals.setProperty("galene.muc.enabled", (muc_enabled != null && muc_enabled.equals("on")) ? "true": "false");     
 
         String enabled = request.getParameter("enabled");
-        JiveGlobals.setProperty("galene.enabled", (enabled != null && enabled.equals("on")) ? "true": "false");   		
+        JiveGlobals.setProperty("galene.enabled", (enabled != null && enabled.equals("on")) ? "true": "false");  
+
+		plugin.setupGaleneFiles(); 		
     }
 
     String service_url = plugin.getUrl();    

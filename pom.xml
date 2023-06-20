@@ -7,12 +7,12 @@
     <parent>
         <artifactId>plugins</artifactId>
         <groupId>org.igniterealtime.openfire</groupId>
-        <version>4.7.1</version>
+        <version>4.7.5</version>
     </parent>
     
     <groupId>org.igniterealtime.openfire</groupId>
     <artifactId>galene</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
     
     <properties>      
     </properties>    
@@ -142,7 +142,14 @@
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-validator</artifactId>
 			<version>5.2.4.Final</version>
-		</dependency>		
+		</dependency>	
+
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.15</version>
+		</dependency>
+		
     </dependencies>   
     
     <repositories>
