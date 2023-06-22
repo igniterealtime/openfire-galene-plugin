@@ -318,7 +318,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			List<MUCRoom> rooms = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service).getChatRooms();
 
 			for (MUCRoom room : rooms) {					
-				writeGaleneGroupFile(room.getJID());
+				writeGaleneGroupFile(room.getJID(), null);
 			}	
 		}			
     }
@@ -357,7 +357,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());
 
 			if (room != null && room.isPersistent()) {
-				writeGaleneGroupFile(room.getJID());
+				writeGaleneGroupFile(room.getJID(), null);
 			}
 		}
     }
@@ -417,7 +417,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 				}
 			}
 
-			if (!properties.containsKey("galene.enabled")) properties.put("galene.enabled", "false");
+			if (!properties.containsKey("galene.enabled")) properties.put("galene.enabled", "true");
 			if (!properties.containsKey("galene.federation.enabled")) properties.put("galene.federation.enabled", "false");		
 			if (!properties.containsKey("galene.owner.password")) properties.put("galene.owner.password", StringUtils.randomString(40));
 			if (!properties.containsKey("galene.admin.password")) properties.put("galene.admin.password", StringUtils.randomString(40));
@@ -426,7 +426,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		return properties;
 	}
 
-    public void writeGaleneGroupFile(JID roomJID)
+    public void writeGaleneGroupFile(JID roomJID, Map<String, String> properties)
     {
 		MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());					
         Log.debug("writeGaleneGroupFile " + roomJID + " " + room);
@@ -436,9 +436,13 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         JSONObject json = new JSONObject();
 		
         String roomName = room.getJID().getNode();
+        String iniFileName = galeneHomePath + "/groups/" + roomName + ".json";		
         String password = room.getPassword();
-		Map<String, String> properties = (Map<String, String>) muc_properties.get(room.getJID().toString());		
+		
+		if (properties == null) properties = (Map<String, String>) muc_properties.get(room.getJID().toString());		
 		if (properties == null) properties = getGroupChatProperties(roomJID);
+		
+		(new File(iniFileName)).delete();
 		
 		if ("true".equals(properties.get("galene.enabled"))) {	
 			JSONArray op = new JSONArray();
@@ -478,7 +482,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 				}
 			}
 
-			if (presenter_kt == 0) presenter.put(0, new JSONObject()); // anybody is presenter
+			//if (presenter_kt == 0 && !room.isMembersOnly()) presenter.put(0, new JSONObject()); // anybody is presenter
 			json.put("presenter", presenter);
 
 			for (JID jid : room.getMembers())
@@ -495,14 +499,6 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
 			if (other_kt == 0 && !room.isMembersOnly()) other.put(0, new JSONObject());  // anybody is member
 			json.put("other", other);
-		
-		} else {	// use openfire as a auth sever
-		
-			if (!room.isMembersOnly() && (password == null || password.isEmpty())) {
-				JSONArray other = new JSONArray();
-				other.put(0, new JSONObject());  // anybody is member
-				json.put("other", other);		
-			}
 			
 			JSONArray authKeys = new JSONArray();	
 			JSONObject authKey = new JSONObject();
@@ -514,37 +510,37 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			
 			json.put("authKeys", authKeys);				
 			json.put("authServer", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/galene/auth-server");								
-		}
 
-        json.put("public", room.isPublicRoom());
-        json.put("description", room.getDescription());
-        json.put("contact", room.getName());
-        json.put("comment", room.getSubject());
-        json.put("allow-recording", room.isLogEnabled());
-        json.put("allow-anonymous", !room.isMembersOnly() && (password == null || password.isEmpty()));
-        json.put("allow-subgroups", room.canOccupantsInvite());
-		json.put("unrestricted-tokens", room.canOccupantsInvite());
-        json.put("max-clients", room.getMaxUsers());
-		
-        String iniFileName = galeneHomePath + "/groups/" + roomName + ".json";
-        List<String> lines = new ArrayList<String>();
-        lines.add(json.toString());
-
-        Log.info("Creating " + iniFileName);
-
-        try
-        {
-			File fil = new File(iniFileName);
-			fil.setReadable(true, true);
-			fil.setWritable(true, true);	
+			json.put("public", room.isPublicRoom());
+			json.put("description", room.getDescription());
+			json.put("contact", room.getName());
+			json.put("comment", room.getSubject());
+			json.put("allow-recording", room.isLogEnabled());
+			json.put("allow-anonymous", !room.isMembersOnly() && (password == null || password.isEmpty()));
+			json.put("allow-subgroups", room.canOccupantsInvite());
+			json.put("unrestricted-tokens", room.canOccupantsInvite());
+			json.put("max-clients", room.getMaxUsers());
 			
-            Path file = Paths.get(iniFileName);
-            Files.write(file, lines, Charset.forName("UTF-8"));
-        }
-        catch ( Exception e )
-        {
-            Log.error( "Unable to write file " + iniFileName, e );
-        }
+
+			List<String> lines = new ArrayList<String>();
+			lines.add(json.toString());
+
+			Log.info("Creating " + iniFileName);
+
+			try
+			{
+				File fil = new File(iniFileName);
+				fil.setReadable(true, true);
+				fil.setWritable(true, true);	
+				
+				Path file = Paths.get(iniFileName);
+				Files.write(file, lines, Charset.forName("UTF-8"));
+			}
+			catch ( Exception e )
+			{
+				Log.error( "Unable to write file " + iniFileName, e );
+			}
+		}			
     }	
 
 

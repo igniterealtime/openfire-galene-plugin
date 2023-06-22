@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 import org.jivesoftware.openfire.XMPPServer;
+import org.jivesoftware.openfire.SessionManager;
+import org.jivesoftware.openfire.session.ClientSession;
 import org.jivesoftware.openfire.auth.AuthFactory;
 import org.jivesoftware.util.JiveGlobals;
 import org.jivesoftware.openfire.muc.*;
@@ -30,14 +32,28 @@ public class AuthServer extends HttpServlet {
         Log.info("AuthServer post\n" + body);
 		
 		try {
+            String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();			
 			JSONObject json = new JSONObject(body);
 			String username = json.getString("username");
 			String password = json.getString("password");
+			JID jid = null;
+			ClientSession session = null;
+			MUCRoom mucRoom = null;			
 			
 			if (!"".equals(username) && !"".equals(password) && !"undefined".equals(username) && !"undefined".equals(password) && !"null".equals(username) && !"null".equals(password)) {
 				try {
-					AuthFactory.authenticate(username, password);
-				} catch (org.jivesoftware.openfire.auth.UnauthorizedException ex) {
+					jid = new JID(password);
+					
+					if (domain.equals(jid.getDomain())) {				
+						session = SessionManager.getInstance().getSession(jid);
+						
+						if (session == null) {		
+							response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+							return;
+						}						
+					}						
+
+				} catch (Exception ex) {
 					response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 					return;					
 				}
@@ -64,9 +80,7 @@ public class AuthServer extends HttpServlet {
 					}
 					
 					Log.info("AuthServer location\n" + location);
-					
-					MUCRoom mucRoom = null;
-					
+										
 					if ("public".equals(room)) {
 						response.setStatus(HttpServletResponse.SC_NO_CONTENT);	
 						return;						
@@ -75,68 +89,101 @@ public class AuthServer extends HttpServlet {
 					}
 					
 					if (mucRoom == null) {
-						response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+						response.setStatus(HttpServletResponse.SC_NO_CONTENT);
 						return;
-					}
-
-					for (JID jid : mucRoom.getMembers()) {				
-						if (jid.getNode().equals(username)) perm = 1;
-					}
-					
-					for (JID jid : mucRoom.getAdmins()) {				
-						if (jid.getNode().equals(username)) perm = 2;
+					}					
+						
+					if (session != null && session.isAnonymousUser())
+					{
+						if (mucRoom.isMembersOnly()) {
+							response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+						} else {
+							response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+						}
+						return;						
 					}	
 
-					for (JID jid : mucRoom.getOwners()) {				
-						if (jid.getNode().equals(username)) perm = 3;
-					}								
-				}				
-				
-				JSONArray permissions = new JSONArray();
-				
-				if (perm == 3) {
-					permissions.put(0, "record");	
-					permissions.put(1, "op");							
-					permissions.put(2, "present");							
-				} 
-				else
+					boolean isOccupant = false;
+					
+					for (MUCRole role : mucRoom.getOccupants()) 
+					{
+						if (role.getUserAddress().toString().equals(jid.toString())) {
+							isOccupant = true;
+							
+							if (MUCRole.Affiliation.member == role.getAffiliation()) perm = 1;
+							if (MUCRole.Affiliation.admin == role.getAffiliation()) perm = 2;
+							if (MUCRole.Affiliation.owner == role.getAffiliation()) perm = 3;	
+							break;
+						}
+					}
+					
+					if (!isOccupant) {
+						response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+						return;
+					}					
 
-				if (perm == 2) {
-					permissions.put(0, "op");							
-					permissions.put(1, "present");							
-				}	
+					JSONArray permissions = new JSONArray();
+					
+					if (perm == 3) {
+						permissions.put(0, "record");	
+						permissions.put(1, "op");							
+						permissions.put(2, "present");	
+						permissions.put(3, "token");					
+					} 
+					else
 
-				else
+					if (perm == 2) {
+						permissions.put(0, "op");							
+						permissions.put(1, "present");	
+						permissions.put(2, "token");						
+					}	
+					else
 
-				if (perm == 1) {						
-					permissions.put(0, "present");							
-				}				
-				
-				
-				JSONObject jwtPayload = new JSONObject();		
-				LocalDateTime iat = LocalDateTime.now().minusDays(1);
-				LocalDateTime ldt = iat.plusDays(2);	
+					if (perm == 1) {						
+						permissions.put(0, "present");	
+						permissions.put(1, "token");						
+					}	
+					else {
+						if (mucRoom.canOccupantsInvite()) permissions.put(0, "token");
+					}
+					
+					
+					JSONObject jwtPayload = new JSONObject();		
+					LocalDateTime iat = LocalDateTime.now().minusDays(1);
+					LocalDateTime ldt = iat.plusDays(2);	
 
-				jwtPayload.put("sub", username);
-				jwtPayload.put("aud", location);
-				jwtPayload.put("permissions", permissions);			
-				jwtPayload.put("iat", iat.toEpochSecond(ZoneOffset.UTC));
-				jwtPayload.put("exp", ldt.toEpochSecond(ZoneOffset.UTC));
-				jwtPayload.put("iss", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/galene/auth-server");			
-						
-				String token = new JWebToken(jwtPayload).toString();			
-				Log.info("AuthServer token\n" + token);
-		
-				response.setHeader("content-type", "application/jwt");
-				response.getOutputStream().print(token);
-				response.setStatus(HttpServletResponse.SC_ACCEPTED);	
+					jwtPayload.put("sub", username);
+					jwtPayload.put("aud", location);
+					jwtPayload.put("permissions", permissions);			
+					jwtPayload.put("iat", iat.toEpochSecond(ZoneOffset.UTC));
+					jwtPayload.put("exp", ldt.toEpochSecond(ZoneOffset.UTC));
+					jwtPayload.put("iss", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/galene/auth-server");			
+							
+					String token = new JWebToken(jwtPayload).toString();			
+					Log.info("AuthServer token\n" + token);
+			
+					response.setHeader("content-type", "application/jwt");
+					response.getOutputStream().print(token);
+					response.setStatus(HttpServletResponse.SC_ACCEPTED);
+					
+				} else {
+					response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+					return;
+				}					
+					
 			} else {
-				response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+				if (mucRoom != null && mucRoom.isMembersOnly()) {
+					response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+				} else {
+					response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+				}
+				return;
 			}			
 			
 		} catch (Exception e) {
 			Log.error("AuthServer post", e);
-			response.setStatus(HttpServletResponse.SC_FORBIDDEN);			
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);	
+			return;
 		}
 	}
 	

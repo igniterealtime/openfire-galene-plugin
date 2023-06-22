@@ -29,11 +29,11 @@
         properties.put("galene.enabled", (enabled != null && enabled.equals("on")) ? "true": "false");  
         properties.put("galene.federation.enabled", (federationEnabled != null && federationEnabled.equals("on")) ? "true": "false");  
 		
-		plugin.writeGaleneGroupFile(roomJID);
+		plugin.writeGaleneGroupFile(roomJID, properties);
 	}
 	
 	String groupName = roomJID.getNode();
-	String service_url = plugin.getUrl() + "/galene/video/?username=admin&group=" + groupName;   
+	String service_url = plugin.getUrl() + "/galene/?username=admin&room=" + groupName;   
 %>
 
 
