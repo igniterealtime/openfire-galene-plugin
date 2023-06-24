@@ -34,13 +34,15 @@ public class AuthServer extends HttpServlet {
 		int pos2 = location.indexOf("?");
 		
 		if (pos2 > -1) {
-			String params[] = location.substring(pos2 + 1).split("&");	
+			String params[] = location.substring(pos2 + 1).split("&");
+			String prefix = location.substring(0, pos2);
+			if (!prefix.endsWith("/")) prefix += "/";
 			
 			for (int i=0; i<params.length; i++) {
 				String pairs[] = params[i].split("=");
 				
 				if ("room".equals(pairs[0])) {
-					return location.substring(0, pos2) + "group/" + pairs[1] + "/";
+					return "http://localhost:" + Galene.self.getPort() + "/group/" + pairs[1] + "/";
 				}
 			}
 		}
