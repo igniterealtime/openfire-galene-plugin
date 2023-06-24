@@ -26,6 +26,26 @@ import net.sf.json.*;
 
 public class AuthServer extends HttpServlet {
     private static final Logger Log = LoggerFactory.getLogger(AuthServer.class);
+	
+	private String normaliseLocation(String location) {
+		int pos1 = location.indexOf("/group/");			
+		if (pos1 > -1) return location;
+
+		int pos2 = location.indexOf("?");
+		
+		if (pos2 > -1) {
+			String params[] = location.substring(pos2 + 1).split("&");	
+			
+			for (int i=0; i<params.length; i++) {
+				String pairs[] = params[i].split("=");
+				
+				if ("room".equals(pairs[0])) {
+					return location.substring(0, pos2) + "group/" + pairs[1] + "/";
+				}
+			}
+		}
+		return location;
+	}
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		String body = request.getReader().lines().collect(Collectors.joining());
@@ -59,27 +79,11 @@ public class AuthServer extends HttpServlet {
 				}
 
 				int perm = 0;				
-				String location = json.getString("location");	
-				
-				int pos1 = location.indexOf("?room=");
-				int pos2 = location.indexOf("&");
-				int pos3 = location.indexOf("/group/");				
-				
-				if ((pos1 > -1 && pos2 > -1) || pos3 > -1) {
-					String roomPath, room;
-					
-					if (pos1 > -1 && pos2 > -1) {	// "https://localhost:7443/galene/?room=lobby&username=dele&password=Welcome123"
-						roomPath = location.substring(pos1 + 6, pos2);					
-						room = roomPath.split("/")[0];
-						String parts[] = location.split("/");
-						location = parts[0] + "//" + parts[2] + "/group/" + roomPath + "/";
-						
-					} else {						// "https://localhost:7443/group/lobby/"
-						String parts[] = location.split("/");	
-						room = 	parts[4];					
-					}
-					
-					Log.info("AuthServer location\n" + location);
+				String location = normaliseLocation(json.getString("location"));	
+				String room = location.split("/")[4];			
+								
+				if (room != null) {					
+					Log.info("AuthServer location " + room + " " + location);
 										
 					if ("public".equals(room)) {
 						response.setStatus(HttpServletResponse.SC_NO_CONTENT);	
