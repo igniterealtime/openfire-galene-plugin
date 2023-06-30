@@ -76,7 +76,7 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 					}
 
 					String text = element.getText();
-					Log.info("C2S \n" + text);
+					Log.debug("C2S \n" + text);
 					intercept(text, from, connection);
 					connection.deliver(text);
 				}
@@ -123,8 +123,7 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 
     private String removeNull(String s)
     {
-        if (s == null)
-        {
+        if (s == null) {
             return "";
         }
 

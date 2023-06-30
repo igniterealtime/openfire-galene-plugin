@@ -298,7 +298,7 @@ public class RayoIQHandler {
 	
     private IQ handleIQGet(IQ iq) throws Exception {
 
-		Log.info("RayoComponent handleIQGet \n" + iq.toString());
+		Log.debug("RayoComponent handleIQGet \n" + iq.toString());
 
         final Element element = iq.getChildElement();
         final String namespace = element.getNamespaceURI();
@@ -447,7 +447,7 @@ public class RayoIQHandler {
 	
 	private IQ handleHoldCommand(Object object, IQ iq)
 	{
-		Log.info("RayoComponent handleHoldCommand");
+		Log.debug("RayoComponent handleHoldCommand");
 
 		IQ reply = IQ.createResultIQ(iq);
 		String callId = iq.getTo().getNode();		// far party
@@ -457,7 +457,7 @@ public class RayoIQHandler {
 
 	private IQ handleMuteCommand(Object object, IQ iq)
 	{
-		Log.info("RayoComponent handleMuteCommand");
+		Log.debug("RayoComponent handleMuteCommand");
 
 		boolean muted = object instanceof MuteCommand;
 
@@ -469,7 +469,7 @@ public class RayoIQHandler {
 
 	private IQ handlePrivateCommand(Object object, IQ iq)
 	{
-		Log.info("RayoComponent handlePrivateCommand");
+		Log.debug("RayoComponent handlePrivateCommand");
 
 		boolean privateCall = object instanceof PrivateCommand;
 
@@ -481,7 +481,7 @@ public class RayoIQHandler {
 
 	private IQ handleOnOffHookCommand(Object object, IQ iq)
 	{
-		Log.info("RayoComponent handleOnOffHookCommand");
+		Log.debug("RayoComponent handleOnOffHookCommand");
 
 		IQ reply = IQ.createResultIQ(iq);
 		String handsetId = JID.escapeNode(iq.getFrom().toString());
@@ -495,7 +495,7 @@ public class RayoIQHandler {
 
 	private IQ handleOnOffTalkCommand(Object object, IQ iq, boolean mute)
 	{
-		Log.info("RayoComponent handleOnOffTalkCommand");
+		Log.debug("RayoComponent handleOnOffTalkCommand");
 
 		IQ reply = IQ.createResultIQ(iq);
 		String callId = iq.getTo().getNode();
@@ -505,7 +505,7 @@ public class RayoIQHandler {
 	
 	private IQ handleOnOffSpeakerCommand(Object object, IQ iq, boolean flag)
 	{
-		Log.info("RayoComponent handleOnOffSpeakerCommand");
+		Log.debug("RayoComponent handleOnOffSpeakerCommand");
 
 		IQ reply = IQ.createResultIQ(iq);
 		String callId = iq.getTo().getNode();	
@@ -515,7 +515,7 @@ public class RayoIQHandler {
 
 	private IQ handleDestroySpeakerCommand(Object object, IQ iq)
 	{
-		Log.info("RayoComponent handleDestroySpeakerCommand");
+		Log.debug("RayoComponent handleDestroySpeakerCommand");
 
 		IQ reply = IQ.createResultIQ(iq);
 		DestroySpeakerCommand speaker = (DestroySpeakerCommand) object;	
@@ -525,7 +525,7 @@ public class RayoIQHandler {
 
 	private IQ handleCreateSpeakerCommand(Object object, IQ iq)
 	{
-		Log.info("RayoComponent handleCreateSpeakerCommand");
+		Log.debug("RayoComponent handleCreateSpeakerCommand");
 
 		IQ reply = IQ.createResultIQ(iq);
 		CreateSpeakerCommand speaker = (CreateSpeakerCommand) object;	
@@ -535,7 +535,7 @@ public class RayoIQHandler {
 		
 	private IQ handleRecord(com.rayo.core.verb.Record command, IQ iq)
 	{
-		Log.info("RayoComponent handleRecord " + iq.getFrom());
+		Log.debug("RayoComponent handleRecord " + iq.getFrom());
 
 		IQ reply = IQ.createResultIQ(iq);
 		String callId = iq.getTo().getNode();
@@ -546,7 +546,7 @@ public class RayoIQHandler {
 
 	private IQ handlePauseRecordCommand(boolean flag, IQ iq)
 	{
-		Log.info("RayoComponent handlePauseRecordCommand " + iq.getFrom() + " " + iq.getTo());
+		Log.debug("RayoComponent handlePauseRecordCommand " + iq.getFrom() + " " + iq.getTo());
 
 		IQ reply = IQ.createResultIQ(iq);
 		String callId = iq.getTo().getNode();	
@@ -556,7 +556,7 @@ public class RayoIQHandler {
 
 	private IQ handleSay(Say command, IQ iq)
 	{
-		Log.info("RayoComponent handleSay " + iq.getFrom());
+		Log.debug("RayoComponent handleSay " + iq.getFrom());
 
 		IQ reply = IQ.createResultIQ(iq);
 		final String entityId = iq.getTo().getNode();
@@ -567,7 +567,7 @@ public class RayoIQHandler {
 
 	private IQ handlePauseSayCommand(boolean flag, IQ iq)
 	{
-		Log.info("RayoComponent handlePauseSayCommand " + iq.getFrom() + " " + iq.getTo());
+		Log.debug("RayoComponent handlePauseSayCommand " + iq.getFrom() + " " + iq.getTo());
 
 		IQ reply = IQ.createResultIQ(iq);
 		
@@ -576,7 +576,7 @@ public class RayoIQHandler {
 
 	private IQ handleDtmfCommand(DtmfCommand command, IQ iq)
 	{
-		Log.info("RayoComponent handleDtmfCommand " + iq.getFrom());
+		Log.debug("RayoComponent handleDtmfCommand " + iq.getFrom());
 		IQ reply = IQ.createResultIQ(iq);
 
 		return reply;
@@ -584,7 +584,7 @@ public class RayoIQHandler {
 
 	private IQ handleJoinCommand(JoinCommand command, IQ iq)
 	{
-		Log.info("RayoComponent handleJoinCommand " + iq.getFrom());
+		Log.debug("RayoComponent handleJoinCommand " + iq.getFrom());
 
         IQ reply = IQ.createResultIQ(iq);
 
@@ -593,7 +593,7 @@ public class RayoIQHandler {
 
 	private IQ handleUnjoinCommand(UnjoinCommand command, IQ iq)
 	{
-		Log.info("RayoComponent handleUnjoinCommand " + iq.getFrom());
+		Log.debug("RayoComponent handleUnjoinCommand " + iq.getFrom());
 
         IQ reply = IQ.createResultIQ(iq);
 
@@ -607,7 +607,7 @@ public class RayoIQHandler {
 		String callId = iq.getTo().getNode();
 		String callerId = headers.get("caller_id");
 		String calledId = headers.get("called_id"); 			
-		Log.info("RayoComponent handleHangupCommand " + iq.getFrom() + " " + callerId  + " " + calledId + " " + callId);			
+		Log.debug("RayoComponent handleHangupCommand " + iq.getFrom() + " " + callerId  + " " + calledId + " " + callId);			
 
 		JID source = getJID(callerId);			
 		JID destination = getJID(calledId);			
@@ -639,7 +639,7 @@ public class RayoIQHandler {
 		String callId = iq.getTo().getNode(); 
 		String callerId = headers.get("caller_id"); 
 		String calledId = headers.get("called_id"); 		
-		Log.info("RayoComponent AnswerCommand " + iq.getFrom() + " " + callerId + " " + callId);			
+		Log.debug("RayoComponent AnswerCommand " + iq.getFrom() + " " + callerId + " " + callId);			
 		
 		JID source = getJID(callerId);
 		JID destination = getJID(calledId);			
@@ -672,7 +672,7 @@ public class RayoIQHandler {
 		String callId = iq.getTo().getNode();	
 		String calledId = headers.get("called_id"); 
 		String calleeId = headers.get("callee_id"); 		
-		Log.info("RayoComponent handleAcceptCommand " + iq.getFrom() + " " + calledId + " " + calleeId + " " + callId);
+		Log.debug("RayoComponent handleAcceptCommand " + iq.getFrom() + " " + calledId + " " + calleeId + " " + callId);
 
 		JID destination = getJID(calledId);			
 		JID owner = getJID(calleeId);			
@@ -693,7 +693,7 @@ public class RayoIQHandler {
 	}	
 
 	private IQ handleDialCommand(DialCommand command, IQ iq, boolean transferCall) 	{
-		Log.info("RayoComponent handleDialCommand " + iq.getFrom());
+		Log.debug("RayoComponent handleDialCommand " + iq.getFrom());
 
         IQ reply = IQ.createResultIQ(iq);
 
@@ -800,7 +800,7 @@ public class RayoIQHandler {
 					groupChat = true;
 					
 					for (MUCRole role : room.getParticipants()) {
-						Log.info("RayoComponent sendRayoEvent - " + role.getUserAddress());
+						Log.debug("RayoComponent sendRayoEvent - " + role.getUserAddress());
 						event.setTo(role.getUserAddress());
 						XMPPServer.getInstance().getPresenceRouter().route(event);						
 					}

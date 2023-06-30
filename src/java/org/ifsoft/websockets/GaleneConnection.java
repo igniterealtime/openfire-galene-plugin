@@ -49,7 +49,7 @@ public class GaleneConnection implements Serializable {
 	public String id;
 
     public GaleneConnection(URI uri, int connectTimeout, JID jid) {
-        Log.info("GaleneConnection " + uri + " " + jid);
+        Log.debug("GaleneConnection " + uri + " " + jid);
 		this.jid = jid;
 		
         final SslContextFactory clientSslContextFactory = SslContextFactoryProvider.getClientSslContextFactory();
@@ -114,7 +114,7 @@ public class GaleneConnection implements Serializable {
     }
 
     public void onMessage(String text) {
-        Log.info("S2C \n" + text);
+        Log.debug("S2C \n" + text);
 
 		if (jid != null) {
 			try {

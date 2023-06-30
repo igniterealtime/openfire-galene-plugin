@@ -583,22 +583,24 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		String username = JiveGlobals.getProperty("galene.username", "administrator");
 		JSONObject handshake = new JSONObject();
 		handshake.put("id", username);
+		handshake.put("version", new JSONArray("[\"2\"]"));
 		sendMessage("handshake", handshake, adminConnection);
 	}	
 	
 	public void onMessage(String text) {
-		Log.info("S2Amin \n" + text);
+		//Log.info("S2Amin \n" + text);
 		JSONObject message = new JSONObject(text);
 
-		if (message.has("type") && "ping".equals(message.getString("type"))) {
-			sendMessage("pong", new JSONObject(), adminConnection);
+		if (message.has("type")) {
+			if ("handshake".equals(message.getString("type"))) Log.info("Galene Administrator user connected"); 
+			if ("ping".equals(message.getString("type"))) sendMessage("pong", new JSONObject(), adminConnection);
 		}
 	}
 
 	private void sendMessage(String type, JSONObject payload, GaleneConnection connection) {
 		payload.put("type", type);			
 		String text = payload.toString();
-		Log.info("Admin2S \n" + text);
+		//Log.info("Admin2S \n" + text);
 		connection.deliver(text);
 	}
 
