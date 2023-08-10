@@ -4069,12 +4069,15 @@ async function amConnected() {
 		
 	if (urlParam("room")) {
 		username =  urlParam("username") || connection.jid.split("@")[0] || "";
-		credentials = {
-			type: 'authServer',
-			authServer: server + "/auth-server",
-			location: location.href,
-			password: connection.jid
-		};		
+		
+		if (group.indexOf("public") != 0) {
+			credentials = {
+				type: 'authServer',
+				authServer: server + "/auth-server",
+				location: location.href,
+				password: urlParam("password") || connection.jid
+			};	
+		}			
 	}
 	
 	try {

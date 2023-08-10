@@ -291,8 +291,8 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		
         JSONArray admins = new JSONArray();	
         JSONObject admin = new JSONObject();			
-        admin.put("username", JiveGlobals.getProperty("galene.username", "administrator"));
-		admin.put("password", JiveGlobals.getProperty("galene.password", "administrator"));	
+        admin.put("username", JiveGlobals.getProperty("galene.username", "sfu-admin"));
+		admin.put("password", JiveGlobals.getProperty("galene.password", "sfu-admin"));	
 		admins.put(0, admin);
 		json.put("admin", admins);
 		//json.put("proxyURL",  JiveGlobals.getProperty("galene.url", "http://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + getPort()));		
@@ -326,7 +326,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     private void createAdminUser()
     {
         final UserManager userManager = XMPPServer.getInstance().getUserManager();
-        final String administrator = JiveGlobals.getProperty("galene.username", "administrator");
+        final String administrator = JiveGlobals.getProperty("galene.username", "sfu-admin");
 
         if ( !userManager.isRegisteredUser( administrator ) )
         {
@@ -336,7 +336,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
             {
                 String password = StringUtils.randomString(40);
                 JiveGlobals.setProperty("galene.password", password);
-                userManager.createUser(administrator, password, "Administrator (generated)", null);
+                userManager.createUser(administrator, password, "SFU Administrator (generated)", null);
             }
             catch ( Exception e )
             {
@@ -580,7 +580,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		String url = "ws://localhost:" + galenePort + "/ws";		
 		adminConnection = new GaleneConnection(URI.create(url), 10000, null);
 		
-		String username = JiveGlobals.getProperty("galene.username", "administrator");
+		String username = JiveGlobals.getProperty("galene.username", "sfu-admin");
 		JSONObject handshake = new JSONObject();
 		handshake.put("id", username);
 		handshake.put("version", new JSONArray("[\"2\"]"));
@@ -635,7 +635,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		
 		if (GaleneIQHandler.clients.containsKey(id)) {	
 			GaleneConnection connection	= GaleneIQHandler.clients.get(id);
-			String username = JiveGlobals.getProperty("galene.username", "administrator");
+			String username = JiveGlobals.getProperty("galene.username", "sfu-admin");
 			
 			JSONObject useraction = new JSONObject();
 			useraction.put("source", id);
@@ -660,8 +660,8 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		String line;
 		StringBuilder result = new StringBuilder();
 
-		String username = JiveGlobals.getProperty("galene.username", "administrator");
-		String password = JiveGlobals.getProperty("galene.password", "administrator");		
+		String username = JiveGlobals.getProperty("galene.username", "sfu-admin");
+		String password = JiveGlobals.getProperty("galene.password", "sfu-admin");		
 		String auth = username + ":" + password;
 		String authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));	;
 		String uri = "http://localhost:" + getPort() + urlToRead;

@@ -275,6 +275,19 @@ function showVideo() {
     scheduleReconsiderDownRate();
 }
 
+function isSafari() {
+    let ua = navigator.userAgent.toLowerCase();
+    return ua.indexOf('safari') >= 0 && ua.indexOf('chrome') < 0;
+}
+
+function isFirefox() {
+    let ua = navigator.userAgent.toLowerCase();
+    return ua.indexOf('firefox') >= 0;
+}
+
+/** @type {MediaStream} */
+let safariStream = null;
+
 /**
   * @param{boolean} connected
   */
@@ -288,6 +301,15 @@ function setConnected(connected) {
         displayUsername();
         window.onresize = function(e) {
             scheduleReconsiderDownRate();
+        }
+        if(isSafari()) {
+            /* Safari doesn't allow autoplay and omits host candidates
+             * unless there is Open one and keep it around. */
+            if(!safariStream) {
+                navigator.mediaDevices.getUserMedia({audio: true}).then(s => {
+                    safariStream = s;
+                });
+            }
         }
     } else {
         userbox.classList.add('invisible');
@@ -896,6 +918,8 @@ function newUpStream(localId) {
 async function setSendParameters(c, bps, simulcast) {
     if(!c.up)
         throw new Error('Setting throughput of down stream');
+    if(c.label === 'screenshare')
+        simulcast = false;
     let senders = c.pc.getSenders();
     for(let i = 0; i < senders.length; i++) {
         let s = senders[i];
@@ -1145,11 +1169,6 @@ function addFilters() {
     }
 }
 
-function isSafari() {
-    let ua = navigator.userAgent.toLowerCase();
-    return ua.indexOf('safari') >= 0 && ua.indexOf('chrome') < 0;
-}
-
 const unlimitedRate = 1000000000;
 const simulcastRate = 100000;
 const hqAudioRate = 128000;
@@ -1233,12 +1252,12 @@ function setUpStream(c, stream) {
         };
 
         let encodings = [];
-        let simulcast = doSimulcast();
+        let simulcast = c.label !== 'screenshare' && doSimulcast();
         if(t.kind === 'video') {
             let bps = getMaxVideoThroughput();
             // Firefox doesn't like us setting the RID if we're not
             // simulcasting.
-            if(simulcast && c.label !== 'screenshare') {
+            if(simulcast) {
                 encodings.push({
                     rid: 'h',
                     maxBitrate: bps || unlimitedRate,
@@ -1444,7 +1463,7 @@ async function addShareMedia() {
     if(!safariScreenshareDone) {
         if(isSafari()) {
             let ok = confirm(
-                'Screen sharing in Safari is badly broken.  ' +
+                'Screen sharing in Safari is broken.  ' +
                     'It will work at first, ' +
                     'but then your video will randomly freeze.  ' +
                     'Are you sure that you wish to enable screensharing?'
@@ -1758,15 +1777,6 @@ async function setMedia(c, mirror, video) {
 
     showVideo();
     resizePeers();
-
-    if(!c.up && isSafari() && !findUpMedia('camera')) {
-        // Safari doesn't allow autoplay unless the user has granted media access
-        try {
-            let stream = await navigator.mediaDevices.getUserMedia({audio: true});
-            stream.getTracks().forEach(t => t.stop());
-        } catch(e) {
-        }
-    }
 }
 
 
@@ -3154,23 +3164,15 @@ function parseExpiration(s) {
     return d;
 }
 
-function protocol2Predicate() {
-    if(serverConnection.version === "1")
-        return "This server is too old";
-    return null;
-}
-
 function makeTokenPredicate() {
-    return protocol2Predicate() ||
-        (serverConnection.permissions.indexOf('token') < 0 ?
-         "You don't have permission to create tokens" : null);
+    return (serverConnection.permissions.indexOf('token') < 0 ?
+            "You don't have permission to create tokens" : null);
 }
 
 function editTokenPredicate() {
-    return protocol2Predicate() ||
-        (serverConnection.permissions.indexOf('token') < 0 ||
-         serverConnection.permissions.indexOf('op') < 0 ?
-         "You don't have permission to edit or list tokens" : null);
+    return (serverConnection.permissions.indexOf('token') < 0 ||
+            serverConnection.permissions.indexOf('op') < 0 ?
+            "You don't have permission to edit or list tokens" : null);
 }
 
 /**
@@ -3914,6 +3916,10 @@ async function start() {
             location.pathname.replace(/^\/[a-z]*\//, '').replace(/\/$/, ''),
         );
     }
+
+    // Disable simulcast on Firefox by default, it's buggy.
+    if(isFirefox())
+        getSelectElement('simulcastselect').value = 'off';
 
     let parms = new URLSearchParams(window.location.search);
     if(window.location.search)

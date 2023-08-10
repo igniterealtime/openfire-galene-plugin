@@ -48,21 +48,64 @@ public class AuthServer extends HttpServlet {
 		}
 		return location;
 	}
+	
+	private void sendAcceptedResponse(HttpServletResponse response, JSONArray permissions, String username, String location) {
+		JSONObject jwtPayload = new JSONObject();		
+		LocalDateTime iat = LocalDateTime.now().minusDays(1);
+		LocalDateTime ldt = iat.plusDays(2);	
+
+		jwtPayload.put("sub", username);
+		jwtPayload.put("aud", location);
+		jwtPayload.put("permissions", permissions);			
+		jwtPayload.put("iat", iat.toEpochSecond(ZoneOffset.UTC));
+		jwtPayload.put("exp", ldt.toEpochSecond(ZoneOffset.UTC));
+		jwtPayload.put("iss", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/galene/auth-server");			
+				
+		String token = new JWebToken(jwtPayload).toString();			
+		Log.info("AuthServer token\n" + token);
+		response.setHeader("content-type", "application/jwt");		
+
+		try {
+			response.getOutputStream().print(token);
+			response.setStatus(HttpServletResponse.SC_ACCEPTED);
+
+		} catch (Exception ex) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);				
+		}			
+	}
+	
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		String body = request.getReader().lines().collect(Collectors.joining());
         Log.info("AuthServer post\n" + body);
 		
-		try {
-            String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();			
+		try {			
+            String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();	
+			
 			JSONObject json = new JSONObject(body);
 			String username = json.getString("username");
 			String password = json.getString("password");
+			String location = normaliseLocation(json.getString("location"));
+				
 			JID jid = null;
 			ClientSession session = null;
 			MUCRoom mucRoom = null;			
 			
 			if (!"".equals(username) && !"".equals(password) && !"undefined".equals(username) && !"undefined".equals(password) && !"null".equals(username) && !"null".equals(password)) {
+				String adminUsername = JiveGlobals.getProperty("galene.username", "sfu-admin");
+				String adminPassword = JiveGlobals.getProperty("galene.password", "sfu-admin");	
+				
+				if (username.equals(adminUsername) && password.equals(adminPassword)) {	// superuser
+					JSONArray permissions = new JSONArray();
+					permissions.put(0, "record");	
+					permissions.put(1, "op");							
+					permissions.put(2, "present");	
+					permissions.put(3, "token");					
+				
+					sendAcceptedResponse(response, permissions, username, location);
+					return;
+				}
+				
 				try {
 					jid = new JID(password);
 					
@@ -80,8 +123,7 @@ public class AuthServer extends HttpServlet {
 					return;					
 				}
 
-				int perm = 0;				
-				String location = normaliseLocation(json.getString("location"));	
+				int perm = 0;					
 				String room = location.split("/")[4];			
 								
 				if (room != null) {					
@@ -153,24 +195,7 @@ public class AuthServer extends HttpServlet {
 						if (mucRoom.canOccupantsInvite()) permissions.put(0, "token");
 					}
 					
-					
-					JSONObject jwtPayload = new JSONObject();		
-					LocalDateTime iat = LocalDateTime.now().minusDays(1);
-					LocalDateTime ldt = iat.plusDays(2);	
-
-					jwtPayload.put("sub", username);
-					jwtPayload.put("aud", location);
-					jwtPayload.put("permissions", permissions);			
-					jwtPayload.put("iat", iat.toEpochSecond(ZoneOffset.UTC));
-					jwtPayload.put("exp", ldt.toEpochSecond(ZoneOffset.UTC));
-					jwtPayload.put("iss", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/galene/auth-server");			
-							
-					String token = new JWebToken(jwtPayload).toString();			
-					Log.info("AuthServer token\n" + token);
-			
-					response.setHeader("content-type", "application/jwt");
-					response.getOutputStream().print(token);
-					response.setStatus(HttpServletResponse.SC_ACCEPTED);
+					sendAcceptedResponse(response, permissions, username, location);
 					
 				} else {
 					response.setStatus(HttpServletResponse.SC_FORBIDDEN);

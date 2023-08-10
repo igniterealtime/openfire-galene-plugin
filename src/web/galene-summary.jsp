@@ -14,6 +14,8 @@
 
 <% 
     Galene plugin = Galene.self;
+	plugin.setupGaleneFiles(); 	// refresh galene
+		
 	JSONArray connections = new JSONArray();
 	String json = Galene.self.getJson("/stats.json");
 	
@@ -31,15 +33,12 @@
     <body>
 
 <%
-		String service_url = plugin.getUrl(); 
-		String url = JiveGlobals.getProperty("galene.url", service_url) + "/galene/?room=public&username=admin";
+	String service_url = JiveGlobals.getProperty("galene.url",  plugin.getUrl());
+	String adminUsername = JiveGlobals.getProperty("galene.username", "administrator");
+	String adminPassword = JiveGlobals.getProperty("galene.password", "administrator");	   
 %>	
-	<div>
-		<p><fmt:message key="galene.client.url.desc" /><%=  "<a target='_blank' href='" + url + "'>" + url + "</a>"  %></p>
-	</div>
 
 <% if (request.getParameter("deletesuccess") != null) { %>
-
 
     <div class="jive-success">
     <table cellpadding="0" cellspacing="0" border="0">
@@ -56,10 +55,12 @@
 
 	for (int s=0; s<connections.length(); s++) {
 		JSONObject connection = connections.getJSONObject(s);
+		String roomName = connection.getString("name");
+		String url = service_url + "/galene/?room=" + roomName + "&username=" + adminUsername + "&password=" + adminPassword;		
 
 %>
 
-<div class='jive-contentBoxHeader'><%= connection.getString("name") %></div>		
+<div class='jive-contentBoxHeader'><a target='_blank' href='<%= url %>'><%= roomName %></a></div>		
 <div class='jive-contentBox'>
 <table cellpadding="0" cellspacing="0" border="0" width="100%">
 <thead>

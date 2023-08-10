@@ -88,7 +88,7 @@
                     <fmt:message key="config.page.configuration.username"/>
                 </td>
                 <td><input type="text" size="50" maxlength="100" name="username" required
-                       value="<%= JiveGlobals.getProperty("galene.username", "administrator") %>">
+                       value="<%= JiveGlobals.getProperty("galene.username", "sfu-admin") %>">
                 </td>
             </tr>   
             <tr>
@@ -96,7 +96,7 @@
                     <fmt:message key="config.page.configuration.password"/>
                 </td>
                 <td><input type="password" size="50" maxlength="100" name="password" required
-                       value="<%= JiveGlobals.getProperty("galene.password", "administrator") %>">
+                       value="<%= JiveGlobals.getProperty("galene.password", "sfu-admin") %>">
                 </td>
             </tr>              
             <tr>
