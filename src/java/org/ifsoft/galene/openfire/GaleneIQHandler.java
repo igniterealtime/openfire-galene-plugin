@@ -12,9 +12,11 @@ import org.jivesoftware.openfire.event.SessionEventListener;
 import org.jivesoftware.openfire.event.SessionEventDispatcher;
 import org.jivesoftware.openfire.session.ClientSession;
 import org.jivesoftware.openfire.session.Session;
+import org.jivesoftware.openfire.muc.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.xmpp.packet.Presence;
+import org.xmpp.packet.Message;
 import org.xmpp.packet.IQ;
 import org.xmpp.packet.JID;
 import org.xmpp.packet.PacketError;
@@ -34,6 +36,7 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
     private final static Logger Log = LoggerFactory.getLogger( GaleneIQHandler.class );	
 	public final static ConcurrentHashMap<String, GaleneConnection> connections = new ConcurrentHashMap<>();
 	public final static ConcurrentHashMap<String, GaleneConnection> clients = new ConcurrentHashMap<>();
+	private final static String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
 	
 	
 	public void startHandler() {
@@ -77,7 +80,7 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 
 					String text = element.getText();
 					Log.debug("C2S \n" + text);
-					intercept(text, from, connection);
+					intercept(text, iq.getFrom(), connection);
 					connection.deliver(text);
 				}
 				else {
@@ -97,13 +100,84 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
     }	
 	
 	
-	private void intercept(String text, String from, GaleneConnection connection) {
+	private void intercept(String text, JID from, GaleneConnection connection) {
 		JSONObject message = new JSONObject(text);
-
+		/*
+		{
+			type: 'handshake',
+			version: ["2"],
+			id: id
+		}
+		*/
 		if (message.has("type") && "handshake".equals(message.getString("type")) && message.has("id")) {
 			String id = message.getString("id");	
 			connection.id = id;
 			GaleneIQHandler.clients.put(id, connection);
+		}
+		else
+
+		/*
+		{
+			type: 'join',
+			kind: 'join' or 'leave',
+			group: group,
+			username: username,
+			password: password,
+			data: data
+		}
+		*/
+		if (message.has("type") && "join".equals(message.getString("type")) && message.has("group")) {
+			String group = message.getString("group");	
+			
+			if (!group.startsWith("public")) {
+				String room = group.split("/")[0];
+				Log.debug("User " + from + " joins " + room);
+				connection.room = room;
+				
+				Presence pres = new Presence();	
+				pres.setTo(room + "@conference." + domain + "/" + from.getNode() + " (" + group + ")");	
+				pres.setFrom(from);
+				pres.addChildElement("x", "http://jabber.org/protocol/muc");						
+				
+				XMPPServer.getInstance().getPresenceRouter().route(pres);					
+			}
+		}
+		else
+			
+		/*
+		{
+			type: 'chat',
+			kind: '' or 'me',
+			source: source-id,
+			username: username,
+			dest: dest-id,
+			privileged: boolean,
+			time: time,
+			noecho: false,
+			value: message
+		}
+		*/	
+		if (message.has("type") && "chat".equals(message.getString("type")) && message.has("value") && connection.room != null) {
+			String source = message.getString("source");
+			String dest = message.getString("dest");
+			String value = message.getString("value");	
+			String service = "conference";
+
+			MultiUserChatService mucService = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service);
+			MUCRoom room = mucService.getChatRoom(connection.room);					
+			
+			if (room != null) {				
+				Message msg = new Message();	
+				msg.setBody(value);								
+				
+				if (dest.isEmpty()) {						
+					msg.setType(Message.Type.groupchat);							
+					msg.setFrom(connection.jid);							
+					msg.setTo(connection.room + "@" + service + "." + domain);		
+					
+					XMPPServer.getInstance().getMessageRouter().route(msg);						
+				}			
+			}
 		}		
 	}	
 

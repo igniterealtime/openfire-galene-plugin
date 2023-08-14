@@ -123,28 +123,31 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         Log.info("gaelene initiated");
     }
 
-    public static String getPort()
-    {
+    public static String getPort() {
         return "6060";
     }
 
-    public static String getTurnPort()
-    {
+    public static String getPortRangeMin() {
+        return "10000";
+    }
+
+    public static String getPortRangeMax() {
+        return "20000";
+    }
+	
+    public static String getTurnPort() {
         return "10014";
     }
 
-    public String getHome()
-    {
+    public String getHome() {
         return galeneHomePath;
     }
 
-    public static String getUrl()
-    {
+    public static String getUrl() {
         return "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443");
     }
 
-    public static String getIpAddress()
-    {
+    public static String getIpAddress() {
         String ourHostname = XMPPServer.getInstance().getServerInfo().getHostname();
         String ourIpAddress = "127.0.0.1";
 
@@ -200,14 +203,16 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     {
         boolean galeneEnabled = JiveGlobals.getBooleanProperty("galene.enabled", true);
 
-        if (galeneExePath != null && galeneEnabled)
-        {
+        if (galeneExePath != null && galeneEnabled)	{
             createAdminUser();
             setupGaleneFiles();
-
+			
+			String updMin = JiveGlobals.getProperty("galene.port.range.min", getPortRangeMin());
+			String updMax = JiveGlobals.getProperty("galene.port.range.max", getPortRangeMax());			
             String turn = JiveGlobals.getProperty("galene.turn.ipaddr", getIpAddress()) + ":" + JiveGlobals.getProperty("galene.turn.port", "10014");
-            String params = "--insecure=true --http=:" + getPort() + " --turn=" + turn;
-            galeneThread = Spawn.startProcess(galeneExePath + " " + params, new File(galeneHomePath), this);
+            String params = "--insecure=true --http=:" + getPort() + " --turn=" + turn + " --udp-range=" + updMin + "-" + updMax;
+            
+			galeneThread = Spawn.startProcess(galeneExePath + " " + params, new File(galeneHomePath), this);
 			
 			try
 			{	
@@ -219,7 +224,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 				Log.error("startGoProcesses error", e);
 			}		
 
-            Log.info("Galene enabled " + galeneExePath);
+            Log.info("Galene enabled " + galeneExePath + " " + params);
 
         } else {
             Log.info("Galene disabled");
@@ -387,9 +392,27 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
     }
 
-    public void messageReceived(JID roomJID, JID user, String nickname, Message message)
-    {
-
+    public void messageReceived(JID roomJID, JID user, String nickname, Message message)  {
+		final String from = user.toBareJID();
+		final String room = roomJID.getNode();	
+		final String body = message.getBody();
+	
+		if (body != null && !GaleneIQHandler.connections.containsKey(from)) {
+			Log.debug("messageReceived " + from + " " + room + "\n" + body);
+			
+			for (GaleneConnection conn : GaleneIQHandler.connections.values()) 
+			{
+				if (room.equals(conn.room)) {
+					JSONObject json = new JSONObject();
+					json.put("type", "chat");
+					json.put("username", nickname);			
+					json.put("source", "");			
+					json.put("value", body);
+					json.put("time", System.currentTimeMillis());							
+					conn.onMessage(json.toString());
+				}					
+			}	
+		}			
     }
 
     public void roomSubjectChanged(JID roomJID, JID user, String newSubject)

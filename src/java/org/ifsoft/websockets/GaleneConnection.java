@@ -44,8 +44,9 @@ public class GaleneConnection implements Serializable {
     private boolean connected = false;
     private WebSocketClient wsClient = null;
     private ProxySocket proxySocket = null;
-	private JID jid;
-	
+
+	public JID jid;
+	public String room;		
 	public String id;
 
     public GaleneConnection(URI uri, int connectTimeout, JID jid) {
@@ -171,7 +172,10 @@ public class GaleneConnection implements Serializable {
         @OnWebSocketMessage public void onMessage(String msg)
         {
             Log.debug("ProxySocket onMessage \n" + msg);
-            if (proxyConnection != null) proxyConnection.onMessage(msg);
+			
+            if (proxyConnection != null) {
+				proxyConnection.onMessage(msg);	
+			}				
         }
 
         public void deliver(String text)

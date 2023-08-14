@@ -23,6 +23,12 @@
         
         String port = request.getParameter("port");     
         JiveGlobals.setProperty("galene.port", port);   
+		
+        String portRangeMin = request.getParameter("port_range_min");     
+        JiveGlobals.setProperty("galene.port.range.min", portRangeMin); 
+		
+        String portRangeMax = request.getParameter("port_range_max");     
+        JiveGlobals.setProperty("galene.port.range.max", portRangeMax); 		
         
         String ipaddr = request.getParameter("ipaddr");     
         JiveGlobals.setProperty("galene.ipaddr", ipaddr);   
@@ -115,6 +121,22 @@
                        value="<%= JiveGlobals.getProperty("galene.port", plugin.getPort()) %>">
                 </td>                               
             </tr>  
+            <tr>
+                <td align="left" width="150">
+                    <fmt:message key="config.page.configuration.port.range.min"/>
+                </td>
+                <td><input type="text" size="50" maxlength="100" name="port_range_min" required
+                       value="<%= JiveGlobals.getProperty("galene.port.range.min", plugin.getPortRangeMin()) %>">
+                </td>                               
+            </tr>  	
+            <tr>
+                <td align="left" width="150">
+                    <fmt:message key="config.page.configuration.port.range.max"/>
+                </td>
+                <td><input type="text" size="50" maxlength="100" name="port_range_max" required
+                       value="<%= JiveGlobals.getProperty("galene.port.range.max", plugin.getPortRangeMax()) %>">
+                </td>                               
+            </tr>			
             <tr>
                 <td align="left" width="150">
                     <fmt:message key="config.page.configuration.turn.ipaddr"/>
