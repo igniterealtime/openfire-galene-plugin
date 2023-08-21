@@ -23,12 +23,17 @@
   	<firstname>Dele</firstname>
 	<surname>Olajide</surname> 
 	<email>dele@olajide.net</email>	
+    <jid>dele.olajide@igniterealtime.org</jid>	
   </author>
   <revision> 
-    <version>0.1</version> 
+    <version>0.0.1</version>
     <date>2022-10-10</date> 
     <initials>do</initials> 
-    <remark>Initial version.</remark> 
+    <remark>
+	  <ul>
+		<li>Initial version.</li>
+      </ul>
+	</remark> 
   </revision> 
    
 </header> 
