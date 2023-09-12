@@ -145,13 +145,14 @@ function ServerConnection() {
     this.userdata = {};
 
     /* Callbacks */
-
+	
     /** BAO
      * onhandshake is called when the connection handshake has been recieved
      *
      * @type{(this: ServerConnection) => void}
      */
-    this.onhandshake = null;
+    this.onhandshake = null;	
+
     /**
      * onconnected is called when the connection has been established
      *
@@ -288,7 +289,7 @@ ServerConnection.prototype.send = function(m) {
  * @returns {Promise<ServerConnection>}
  * @function
  */
-// BAO
+ // BAO
 ServerConnection.prototype.connect = async function(connection, host) {
     let sc = this;
     if(sc.socket) {
@@ -307,7 +308,7 @@ ServerConnection.prototype.connect = async function(connection, host) {
         this.socket.onopen = function(e) {
             sc.send({
                 type: 'handshake',
-                version: ["2", "1"],
+                version: ['2'],
                 id: sc.id,
             });
             if(sc.onconnected)
@@ -339,22 +340,14 @@ ServerConnection.prototype.connect = async function(connection, host) {
         };
         this.socket.onmessage = function(e) {
             let m = JSON.parse(e.data);
-			console.debug("socket.onmessage", m);			
             switch(m.type) {
             case 'handshake': {
-                /** @type {string} */
-                let v;
-                if(!m.version || !(m.version instanceof Array) ||
-                   m.version.length < 1 || typeof(m.version[0]) !== 'string') {
-                    v = null;
+                if((m.version instanceof Array) && m.version.includes('2')) {
+                    sc.version = '2';
                 } else {
-                    v = m.version[0];
-                }
-                if(v === "1" || v === "2") {
-                    sc.version = v;
-                } else {
-                    console.warn(`Unknown protocol version ${v || m.version}`);
-                    sc.version = "1"
+                    sc.version = null;
+                    console.error(`Unknown protocol version ${m.version}`);
+                    throw new Error(`Unknown protocol version ${m.version}`);
                 }
 				if(sc.onhandshake) // BAO
 					sc.onhandshake.call(sc);				
@@ -1235,10 +1228,11 @@ Stream.prototype.close = function(replace) {
     let changed = recomputeUserStreams(c.sc, userid);
     if(changed && c.sc.onuser)
         c.sc.onuser.call(c.sc, userid, "change");
-    c.sc = null;
 
     if(c.onclose)
         c.onclose.call(c, replace);
+
+    c.sc = null;
 };
 
 /**
@@ -1486,7 +1480,7 @@ Stream.prototype.updateStats = async function() {
 
         if(report) {
             for(let r of report.values()) {
-                if(rtid && r.type === 'track') {
+                if(rtid && r.type === 'inbound-rtp') {
                     if(!('totalAudioEnergy' in r))
                         continue;
                     if(!stats[rtid])

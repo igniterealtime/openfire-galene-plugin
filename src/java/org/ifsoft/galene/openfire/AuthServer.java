@@ -91,34 +91,48 @@ public class AuthServer extends HttpServlet {
 			ClientSession session = null;
 			MUCRoom mucRoom = null;			
 			
-			if (!"".equals(username) && !"".equals(password) && !"undefined".equals(username) && !"undefined".equals(password) && !"null".equals(username) && !"null".equals(password)) {
-				String adminUsername = JiveGlobals.getProperty("galene.username", "sfu-admin");
-				String adminPassword = JiveGlobals.getProperty("galene.password", "sfu-admin");	
-				
-				if (username.equals(adminUsername) && password.equals(adminPassword)) {	// superuser
-					JSONArray permissions = new JSONArray();
-					permissions.put(0, "record");	
-					permissions.put(1, "op");							
-					permissions.put(2, "present");	
-					permissions.put(3, "token");					
-				
-					sendAcceptedResponse(response, permissions, username, location);
-					return;
-				}
-				
+			if (!"".equals(username) && !"".equals(password) && !"undefined".equals(username) && !"undefined".equals(password) && !"null".equals(username) && !"null".equals(password)) {				
 				try {
-					jid = new JID(password);
+					jid = new JID(password);	// password is full JID of user to identify user. User is already authenticated via XMPP
 					
 					if (domain.equals(jid.getDomain())) {				
 						session = SessionManager.getInstance().getSession(jid);
 						
-						if (session == null) {		
+						if (session == null) {	
+							Log.warn("Can't find a session for " + jid);						
 							response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 							return;
-						}						
+						}
+						else
+							
+						if (!username.equals(jid.getNode()) && !session.isAnonymousUser()) {
+							Log.warn("Invalid session for " + jid + " " + username);						
+							response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+							return;							
+						}
+
+						String adminUsername = JiveGlobals.getProperty("galene.username", "sfu-admin");
+						
+						if (username.equals(adminUsername)) {	// superuser
+							JSONArray permissions = new JSONArray();
+							permissions.put(0, "record");	
+							permissions.put(1, "op");							
+							permissions.put(2, "present");	
+							permissions.put(3, "token");					
+						
+							sendAcceptedResponse(response, permissions, username, location);
+							Log.warn("Identified sfu user " + jid);							
+							return;
+						}
+				
+					} else 	{
+						Log.warn("bad user identification " + jid);						
+						response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+						return;
 					}						
 
 				} catch (Exception ex) {
+					Log.warn("bad user identification " + password);						
 					response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 					return;					
 				}
@@ -130,6 +144,7 @@ public class AuthServer extends HttpServlet {
 					Log.info("AuthServer location " + room + " " + location);
 										
 					if ("public".equals(room)) {
+						Log.info("found public room " + room);							
 						response.setStatus(HttpServletResponse.SC_NO_CONTENT);	
 						return;						
 					} else {
@@ -137,12 +152,14 @@ public class AuthServer extends HttpServlet {
 					}
 					
 					if (mucRoom == null) {
+						Log.warn("no room found " + room);							
 						response.setStatus(HttpServletResponse.SC_NO_CONTENT);
 						return;
 					}					
 						
-					if (session != null && session.isAnonymousUser())
-					{
+					if (session != null && session.isAnonymousUser()) {
+						Log.warn("Anonymous User " + jid);	
+						
 						if (mucRoom.isMembersOnly()) {
 							response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 						} else {
@@ -153,9 +170,10 @@ public class AuthServer extends HttpServlet {
 
 					boolean isOccupant = false;
 					
-					for (MUCRole role : mucRoom.getOccupants()) 
-					{
-						if (role.getUserAddress().toString().equals(jid.toString())) {
+					for (MUCRole role : mucRoom.getOccupants()) {
+						Log.info("matching room occupant " + role.getUserAddress() + " with " + jid );
+						
+						if (role.getUserAddress().getNode().equals(jid.getNode())) {
 							isOccupant = true;
 							
 							if (MUCRole.Affiliation.member == role.getAffiliation()) perm = 1;
@@ -166,10 +184,12 @@ public class AuthServer extends HttpServlet {
 					}
 					
 					if (!isOccupant) {
+						Log.warn("Can't find a room occupant for " + jid);
 						response.setStatus(HttpServletResponse.SC_NO_CONTENT);
 						return;
 					}					
 
+					Log.warn("found room occupant with permissions " + perm);
 					JSONArray permissions = new JSONArray();
 					
 					if (perm == 3) {
@@ -198,21 +218,19 @@ public class AuthServer extends HttpServlet {
 					sendAcceptedResponse(response, permissions, username, location);
 					
 				} else {
+					Log.warn("no room found, bad location " + location);						
 					response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 					return;
 				}					
 					
 			} else {
-				if (mucRoom != null && mucRoom.isMembersOnly()) {
-					response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-				} else {
-					response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-				}
+				Log.warn("bad username " + username);				
+				response.setStatus(HttpServletResponse.SC_NO_CONTENT);
 				return;
 			}			
 			
 		} catch (Exception e) {
-			Log.error("AuthServer post", e);
+			Log.error("AuthServer post " + e, e);
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);	
 			return;
 		}

@@ -442,8 +442,10 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
 			if (!properties.containsKey("galene.enabled")) properties.put("galene.enabled", "true");
 			if (!properties.containsKey("galene.federation.enabled")) properties.put("galene.federation.enabled", "false");		
-			if (!properties.containsKey("galene.owner.password")) properties.put("galene.owner.password", StringUtils.randomString(40));
-			if (!properties.containsKey("galene.admin.password")) properties.put("galene.admin.password", StringUtils.randomString(40));
+			
+			// Dont create default passwords
+			//if (!properties.containsKey("galene.owner.password")) properties.put("galene.owner.password", StringUtils.randomString(40));
+			//if (!properties.containsKey("galene.admin.password")) properties.put("galene.admin.password", StringUtils.randomString(40));
 		}
 		
 		return properties;
