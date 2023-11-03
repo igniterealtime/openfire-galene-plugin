@@ -34,8 +34,8 @@
 
 <%
 	String service_url = JiveGlobals.getProperty("galene.url",  plugin.getUrl());
-	String adminUsername = JiveGlobals.getProperty("galene.username", "administrator");
-	String adminPassword = JiveGlobals.getProperty("galene.password", "administrator");	   
+	String adminUsername = JiveGlobals.getProperty("galene.username", "sfu-admin");
+	String adminPassword = JiveGlobals.getProperty("galene.password", "sfu-admin");	   
 %>	
 
 <% if (request.getParameter("deletesuccess") != null) { %>
