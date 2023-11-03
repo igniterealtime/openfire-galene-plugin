@@ -78,16 +78,7 @@
                     </configuration>
                 </execution>                
                </executions>
-            </plugin>    
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.3</version>
-                <configuration>
-                      <fork>true</fork>
-                      <compilerArgument>-XDignore.symbol.file</compilerArgument>                    
-                </configuration>
-            </plugin>        
+            </plugin>            
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
             </plugin>
@@ -105,12 +96,6 @@
             <version>${openfire.version}</version>
             <scope>provided</scope>
         </dependency>
-                
-        <!--dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-proxy</artifactId>
-            <version>10.0.17</version>
-        </dependency-->
         
         <dependency>
             <groupId>net.sf.json-lib</groupId>
