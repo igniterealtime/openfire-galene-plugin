@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.*;
 import javax.xml.bind.DatatypeConverter;
-
+import java.time.Duration;
 import java.io.*;
 import java.net.*;
 import java.security.*;
@@ -53,13 +53,12 @@ public class GaleneConnection implements Serializable {
         Log.debug("GaleneConnection " + uri + " " + jid);
 		this.jid = jid;
 		
-        final SslContextFactory clientSslContextFactory = SslContextFactoryProvider.getClientSslContextFactory();
-
-        final HttpClient httpClient = new HttpClient(new HttpClientTransportOverHTTP(1),clientSslContextFactory);
+        final HttpClient httpClient = new HttpClient();
         final QueuedThreadPool queuedThreadPool = QueuedThreadPoolProvider.getQueuedThreadPool("GaleneConnection-HttpClient");
         httpClient.setExecutor(queuedThreadPool);
         httpClient.setConnectTimeout(connectTimeout);
-        wsClient = new WebSocketClient(httpClient);
+        wsClient = new WebSocketClient();
+		wsClient.setIdleTimeout(Duration.ofMinutes(5));
 
         try {
             wsClient.start();
@@ -140,7 +139,7 @@ public class GaleneConnection implements Serializable {
         return connected;
     }
 	
-    @WebSocket(maxTextMessageSize = 64 * 1024) public class ProxySocket
+	@WebSocket(maxTextMessageSize = 64 * 1024) public class ProxySocket
     {
         private Session session;
         private GaleneConnection proxyConnection;
@@ -149,7 +148,7 @@ public class GaleneConnection implements Serializable {
         public ProxySocket(GaleneConnection proxyConnection)
         {
             this.proxyConnection = proxyConnection;
-        }
+        }		
 
         @OnWebSocketError public void onError(Throwable t)
         {
@@ -185,7 +184,7 @@ public class GaleneConnection implements Serializable {
 
                 while (session == null) Thread.sleep(1000);
 
-                session.getRemote().sendStringByFuture(text);
+                session.getRemote().sendString(text);
             } catch (Exception e) {
                 Log.error("ProxySocket deliver", e);
             }

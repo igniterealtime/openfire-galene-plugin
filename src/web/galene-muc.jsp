@@ -1,5 +1,3 @@
-<%@ taglib uri="admin" prefix="admin" %>
-<admin:FlashMessage/> 
 <%@ page import="java.util.Hashtable"%>
 <%@ page import="org.xmpp.packet.JID" %>
 <%@ page import="java.net.URLEncoder"%>

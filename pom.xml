@@ -7,12 +7,12 @@
     <parent>
         <artifactId>plugins</artifactId>
         <groupId>org.igniterealtime.openfire</groupId>
-        <version>4.7.5</version>
+        <version>4.8.0-SNAPSHOT</version>
     </parent>
     
     <groupId>org.igniterealtime.openfire</groupId>
     <artifactId>galene</artifactId>
-    <version>0.0.5</version>
+    <version>0.0.6-SNAPSHOT</version>
     
     <properties>      
     </properties>    
@@ -94,15 +94,7 @@
             <plugin>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-jspc-maven-plugin</artifactId>
-                <version>9.2.14.v20151106</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.igniterealtime.openfire</groupId>
-                        <artifactId>xmppserver</artifactId>
-                        <version>${openfire.version}</version>
-                    </dependency>
-                </dependencies>
-            </plugin>           
+            </plugin>			           
         </plugins>
     </build>
 
@@ -114,11 +106,11 @@
             <scope>provided</scope>
         </dependency>
                 
-        <dependency>
+        <!--dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-proxy</artifactId>
-            <version>9.4.18.v20190429</version>
-        </dependency>
+            <version>10.0.17</version>
+        </dependency-->
         
         <dependency>
             <groupId>net.sf.json-lib</groupId>
@@ -149,7 +141,13 @@
 			<artifactId>commons-codec</artifactId>
 			<version>1.15</version>
 		</dependency>
-		
+
+		<dependency>
+			<groupId>org.eclipse.jetty.websocket</groupId>
+			<artifactId>websocket-jetty-client</artifactId>
+			<version>10.0.17</version>
+		</dependency>
+	
     </dependencies>   
     
     <repositories>

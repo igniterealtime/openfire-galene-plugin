@@ -6,9 +6,8 @@
     <description>${project.description}</description>
     <version>${project.version}</version>
     <licenseType>Apache 2.0</licenseType>
-    <date>2023-10-31</date>
-    <priorToServerVersion>4.8.0</priorToServerVersion>		
-    <minServerVersion>4.0.0</minServerVersion>
+    <date>2023-11-30</date>
+    <minServerVersion>4.8.0</minServerVersion>
 
    <adminconsole>
         <tab id="sidebar-media-services">                                                                            

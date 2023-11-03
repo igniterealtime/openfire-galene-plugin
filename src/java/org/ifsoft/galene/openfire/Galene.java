@@ -36,7 +36,6 @@ import org.eclipse.jetty.servlets.*;
 import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.websocket.servlet.*;
 import org.eclipse.jetty.websocket.server.*;
-import org.eclipse.jetty.websocket.server.pathmap.ServletPathSpec;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import javax.servlet.http.HttpServlet;
@@ -320,7 +319,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
 		if (JiveGlobals.getBooleanProperty("galene.muc.enabled", false)) {
 			String service = "conference";
-			List<MUCRoom> rooms = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service).getChatRooms();
+			List<MUCRoom> rooms = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service).getActiveChatRooms();
 
 			for (MUCRoom room : rooms) {					
 				writeGaleneGroupFile(room.getJID(), null);
@@ -333,7 +332,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         final UserManager userManager = XMPPServer.getInstance().getUserManager();
         final String administrator = JiveGlobals.getProperty("galene.username", "sfu-admin");
 
-        if ( !userManager.isRegisteredUser( administrator ) )
+        if ( !userManager.isRegisteredUser( new JID(administrator + "@" + XMPPServer.getInstance().getServerInfo().getXMPPDomain()), false ) )
         {
             Log.info( "No administrator user detected. Generating one." );
 
