@@ -58,7 +58,7 @@ public class GaleneConnection implements Serializable {
         httpClient.setExecutor(queuedThreadPool);
         httpClient.setConnectTimeout(connectTimeout);
         wsClient = new WebSocketClient(httpClient);
-		wsClient.setIdleTimeout(Duration.ofMinutes(5));
+		//wsClient.setIdleTimeout(Duration.ofMinutes(5));
 
         try {
             wsClient.start();
