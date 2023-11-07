@@ -1,6 +1,10 @@
 ## Galene
 Selective Forwarding Unit (SFU) for Openfire using Galene.
 
+## CI Build Status
+
+[![Build Status](https://github.com/igniterealtime/openfire-galene-plugin/workflows/Java%20CI/badge.svg)](https://github.com/igniterealtime/openfire-galene-plugin/actions)
+
 ## Overview
 <img src="https://igniterealtime.github.io/openfire-galene-plugin/galene-summary.png" />
 

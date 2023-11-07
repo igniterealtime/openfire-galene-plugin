@@ -57,7 +57,7 @@ public class GaleneConnection implements Serializable {
         final QueuedThreadPool queuedThreadPool = QueuedThreadPoolProvider.getQueuedThreadPool("GaleneConnection-HttpClient");
         httpClient.setExecutor(queuedThreadPool);
         httpClient.setConnectTimeout(connectTimeout);
-        wsClient = new WebSocketClient();
+        wsClient = new WebSocketClient(httpClient);
 		wsClient.setIdleTimeout(Duration.ofMinutes(5));
 
         try {
