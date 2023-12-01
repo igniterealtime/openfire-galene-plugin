@@ -7,7 +7,7 @@
     <parent>
         <artifactId>plugins</artifactId>
         <groupId>org.igniterealtime.openfire</groupId>
-        <version>4.8.0-SNAPSHOT</version>
+        <version>4.8.0-beta</version>
     </parent>
     
     <groupId>org.igniterealtime.openfire</groupId>
@@ -89,7 +89,7 @@
         </plugins>
     </build>
 
-    <dependencies>
+    <dependencies>	
         <dependency>
             <groupId>org.igniterealtime.openfire</groupId>
             <artifactId>xmppserver</artifactId>
@@ -155,6 +155,15 @@
 		</dependency>		
 	
     </dependencies>   
+
+    <distributionManagement>
+        <!-- Repository in which we deploy this project, when desired. -->
+        <repository>
+            <id>igniterealtime</id>
+            <name>Ignite Realtime Repository</name>
+            <url>https://www.igniterealtime.org/archiva/repository/maven/</url>
+        </repository>
+    </distributionManagement>
     
     <repositories>
         <repository>
