@@ -7,17 +7,16 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.ProcessBuilder.Redirect;
-import java.util.Date;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import de.mxro.process.ProcessListener;
 import de.mxro.process.XProcess;
 
 public class Engine {
-
-	public static XProcess startProcess(final String[] command,
-			final ProcessListener listener, final File folder) {
-
+	public static HashMap<String, String> environment = new HashMap<>();
+	
+	public static XProcess startProcess(final String[] command, final ProcessListener listener, final File folder) {
 		final ProcessBuilder pb;
 		final Process process;
 
@@ -27,6 +26,13 @@ public class Engine {
 			pb.directory(folder);
 			pb.redirectOutput(Redirect.PIPE);
 			pb.redirectInput(Redirect.PIPE);
+			
+			Map<String, String> env = pb.environment();
+			
+			for (String key : environment.keySet()) {
+				env.put(key, environment.get(key));
+			}
+			
 			process = pb.start();
 		} catch (final IOException e) {
 			throw new RuntimeException(e);
