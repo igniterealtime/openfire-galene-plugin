@@ -256,12 +256,6 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
                 galeneHomePath = galeneHomePath + File.separator + "win-64";
                 galeneExePath = galeneHomePath + File.separator + "galene.exe";
                 makeFileExecutable(galeneExePath);				
-            }
-            else if(OSUtils.IS_WINDOWS32)
-            {
-                galeneHomePath = galeneHomePath + File.separator + "win-32";
-                galeneExePath = galeneHomePath + File.separator + "galene.exe";
-                makeFileExecutable(galeneExePath);
 
             } else {
                 Log.error("checkNatives unknown OS " + pluginDirectory.getAbsolutePath());
