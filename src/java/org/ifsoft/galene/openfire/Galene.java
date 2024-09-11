@@ -63,7 +63,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     private XProcess galeneThread = null;
     private String galeneExePath = null;
     private String galeneHomePath = null;
-    private String galeneRoot = null;
+    private Path galeneRoot;
     private ExecutorService executor;
     private WebAppContext jspService;
     private GaleneIQHandler galeneIQHandler;
@@ -234,13 +234,11 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     {
         try
         {
-            galeneRoot = JiveGlobals.getHomeDirectory() + File.separator + "galene";
+            galeneRoot = JiveGlobals.getHomePath().resolve("galene");
 
-            File galeneRootPath = new File(galeneRoot);
-
-            if (!galeneRootPath.exists())
+            if (!Files.exists(galeneRoot))
             {
-                galeneRootPath.mkdirs();
+                Files.createDirectories(galeneRoot);
             }
 
             galeneHomePath = pluginDirectory.getAbsolutePath() + File.separator + "classes";
