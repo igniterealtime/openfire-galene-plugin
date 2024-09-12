@@ -12,7 +12,7 @@
     
     <groupId>org.igniterealtime.openfire</groupId>
     <artifactId>galene</artifactId>
-    <version>0.8.1</version>
+    <version>0.8.2-SNAPSHOT</version>
     
     <properties>      
     </properties>    
