@@ -17,7 +17,7 @@
 	plugin.setupGaleneFiles(); 	// refresh galene
 		
 	JSONArray connections = new JSONArray();
-	String json = Galene.self.getJson("/stats.json");
+	String json = Galene.self.getJson("/galene-api/v0/.stats");
 	
 	if (json != null && !"".equals(json)) {
 		connections = new JSONArray(json);

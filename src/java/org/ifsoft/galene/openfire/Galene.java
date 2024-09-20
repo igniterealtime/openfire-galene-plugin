@@ -280,17 +280,25 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         String iniFileName = galeneHomePath + "/data/config.json";
         List<String> lines = new ArrayList<String>();
         Log.info("Creating config " + iniFileName);
-		
-        // create galene global config.json file
 
-        JSONObject json = new JSONObject();	
+		/*
+		{
+			"users":{"root": {"password":"secret", "permissions": "admin"}}
+		}		
+		*/
 		
-        JSONArray admins = new JSONArray();	
-        JSONObject admin = new JSONObject();			
-        admin.put("username", JiveGlobals.getProperty("galene.username", "sfu-admin"));
+        JSONObject json = new JSONObject();			
+        JSONObject users = new JSONObject();	
+        JSONObject admin = new JSONObject();
+		
+        admin.put("permissions", "admin");
 		admin.put("password", JiveGlobals.getProperty("galene.password", "sfu-admin"));	
-		admins.put(0, admin);
-		json.put("admin", admins);
+
+		users.put(JiveGlobals.getProperty("galene.username", "sfu-admin"), admin);
+		json.put("users", users);
+		json.put("writableGroups", true);
+		json.put("publicServer", true);
+		
 		//json.put("proxyURL",  JiveGlobals.getProperty("galene.url", "http://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + getPort()));		
 		
 		lines.add(json.toString());
