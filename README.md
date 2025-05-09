@@ -17,8 +17,7 @@ This version has embedded binaries for only Linux 64 and Windows 64.
 copy galene.jar to the plugins folder
 
 ## Configuration
-
-<img src="https://user-images.githubusercontent.com/110731/259781570-5a9a2918-ca51-4bed-80f0-b50db7aa63cb.png" />
+<img src="https://github.com/user-attachments/assets/d7246327-3c6d-4cc1-9f84-0a652e0c91c6" />
 
 ### Enable SFU
 Enables or disables the plugin. Reload plugin or restart Openfire if this or any of the settings other settings are changed.
