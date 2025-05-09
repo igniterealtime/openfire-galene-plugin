@@ -33,9 +33,7 @@
     <body>
 
 <%
-	String service_url = JiveGlobals.getProperty("galene.url",  plugin.getUrl());
-	String adminUsername = JiveGlobals.getProperty("galene.username", "sfu-admin");
-	String adminPassword = JiveGlobals.getProperty("galene.password", "sfu-admin");	   
+	String service_url = JiveGlobals.getProperty("galene.url",  plugin.getUrl());   
 %>	
 
 <% if (request.getParameter("deletesuccess") != null) { %>
@@ -56,7 +54,7 @@
 	for (int s=0; s<connections.length(); s++) {
 		JSONObject connection = connections.getJSONObject(s);
 		String roomName = connection.getString("name");
-		String url = service_url + "/galene/?room=" + roomName + "&username=" + adminUsername + "&password=" + adminPassword;		
+		String url = service_url + "/group/" + roomName;		
 
 %>
 

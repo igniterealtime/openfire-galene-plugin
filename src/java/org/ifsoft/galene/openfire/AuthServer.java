@@ -10,16 +10,18 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletOutputStream;
 
 import java.io.IOException;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.SessionManager;
-import org.jivesoftware.openfire.session.ClientSession;
 import org.jivesoftware.openfire.auth.AuthFactory;
+import org.jivesoftware.openfire.session.ClientSession;
 import org.jivesoftware.util.JiveGlobals;
 import org.jivesoftware.openfire.muc.*;
+import org.jivesoftware.openfire.group.*;
 
 import org.xmpp.packet.*;
 import net.sf.json.*;
@@ -62,7 +64,7 @@ public class AuthServer extends HttpServlet {
 		jwtPayload.put("iss", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/galene/auth-server");			
 				
 		String token = new JWebToken(jwtPayload).toString();			
-		Log.info("AuthServer token\n" + token);
+		Log.debug("AuthServer token\n" + token);
 		response.setHeader("content-type", "application/jwt");		
 
 		try {
@@ -77,74 +79,41 @@ public class AuthServer extends HttpServlet {
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		String body = request.getReader().lines().collect(Collectors.joining());
-        Log.info("AuthServer post\n" + body);
+        Log.debug("AuthServer post\n" + body);
 		
 		try {			
-            String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();	
-			
+            String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();				
 			JSONObject json = new JSONObject(body);
 			String username = json.getString("username");
 			String password = json.getString("password");
 			String location = normaliseLocation(json.getString("location"));
-				
-			JID jid = null;
-			ClientSession session = null;
-			MUCRoom mucRoom = null;			
+			MUCRoom mucRoom = null;		
 			
 			if (!"".equals(username) && !"".equals(password) && !"undefined".equals(username) && !"undefined".equals(password) && !"null".equals(username) && !"null".equals(password)) {				
-				try {
-					jid = new JID(password);	// password is full JID of user to identify user. User is already authenticated via XMPP
-					
-					if (domain.equals(jid.getDomain())) {				
-						session = SessionManager.getInstance().getSession(jid);
-						
-						if (session == null) {	
-							Log.warn("Can't find a session for " + jid);						
-							response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-							return;
-						}
-						else
-							
-						if (!username.equals(jid.getNode()) && !session.isAnonymousUser()) {
-							Log.warn("Invalid session for " + jid + " " + username);						
-							response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-							return;							
-						}
-
-						String adminUsername = JiveGlobals.getProperty("galene.username", "sfu-admin");
-						
-						if (username.equals(adminUsername)) {	// superuser
-							JSONArray permissions = new JSONArray();
-							permissions.put(0, "record");	
-							permissions.put(1, "op");							
-							permissions.put(2, "present");	
-							permissions.put(3, "token");					
-						
-							sendAcceptedResponse(response, permissions, username, location);
-							Log.warn("Identified sfu user " + jid);							
-							return;
-						}
+				JID jid = new JID(username + "@" + domain);					
+				String adminUsername = JiveGlobals.getProperty("galene.username", "sfu-admin");
+				String adminPassword = JiveGlobals.getProperty("galene.password", "sfu-admin");
 				
-					} else 	{
-						Log.warn("bad user identification " + jid);						
-						response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-						return;
-					}						
-
-				} catch (Exception ex) {
-					Log.warn("bad user identification " + password);						
-					response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-					return;					
-				}
+				if (username.equals(adminUsername) && adminPassword.equals(password)) {	// superuser
+					JSONArray permissions = new JSONArray();
+					permissions.put(0, "record");	
+					permissions.put(1, "op");							
+					permissions.put(2, "present");	
+					permissions.put(3, "token");					
+				
+					sendAcceptedResponse(response, permissions, username, location);
+					Log.warn("Identified sfu user " + jid);							
+					return;
+				}				
 
 				int perm = 0;					
 				String room = location.split("/")[4];			
 								
 				if (room != null) {					
-					Log.info("AuthServer location " + room + " " + location);
+					Log.debug("AuthServer location " + room + " " + location);
 										
 					if ("public".equals(room)) {
-						Log.info("found public room " + room);							
+						Log.debug("found public room " + room);							
 						response.setStatus(HttpServletResponse.SC_NO_CONTENT);	
 						return;						
 					} else {
@@ -155,41 +124,68 @@ public class AuthServer extends HttpServlet {
 						Log.warn("no room found " + room);							
 						response.setStatus(HttpServletResponse.SC_NO_CONTENT);
 						return;
-					}					
-						
-					if (session != null && session.isAnonymousUser()) {
-						Log.warn("Anonymous User " + jid);	
-						
-						if (mucRoom.isMembersOnly()) {
-							response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-						} else {
-							response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-						}
-						return;						
 					}	
 
-					boolean isOccupant = false;
+					ClientSession session = SessionManager.getInstance().getSession(jid);	
 					
-					for (MUCRole role : mucRoom.getOccupants()) {
-						Log.info("matching room occupant " + role.getUserAddress() + " with " + jid );
+					if (session == null || (!session.isAnonymousUser())) {
+						try {
+							AuthFactory.authenticate(username, password);
+
+						} catch (Exception ex) {
+							Log.warn("bad user identification " + password);						
+							response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+							return;					
+						}
+					}							
+					
+					boolean isOwner = false;
+					boolean isAdmin = false;
+					boolean isMember = false;
+					
+					ArrayList<JID> owners = new ArrayList<>(mucRoom.getOwners());
+					Collections.sort(owners);
+					
+					for (JID user : owners) {
+						boolean isGroup = GroupJID.isGroup(user);					
 						
-						if (role.getUserAddress().getNode().equals(jid.getNode())) {
-							isOccupant = true;
-							
-							if (MUCRole.Affiliation.member == role.getAffiliation()) perm = 1;
-							if (MUCRole.Affiliation.admin == role.getAffiliation()) perm = 2;
-							if (MUCRole.Affiliation.owner == role.getAffiliation()) perm = 3;	
-							break;
+						if (isGroup) {
+							Group group = GroupManager.getInstance().getGroup(user);
+							if (group.isUser(jid)) perm = 3;							
+						} else {
+							if (jid.toString().equals(user.toString())) perm = 3;
 						}
 					}
 					
-					if (!isOccupant) {
-						Log.warn("Can't find a room occupant for " + jid);
-						response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-						return;
+					ArrayList<JID> admins = new ArrayList<>(mucRoom.getAdmins());
+					Collections.sort(admins);
+					
+					for (JID user : admins) {
+						boolean isGroup = GroupJID.isGroup(user);					
+						
+						if (isGroup) {
+							Group group = GroupManager.getInstance().getGroup(user);
+							if (group.isUser(jid)) perm = 2;
+						} else {
+							if (jid.toString().equals(user.toString())) perm = 2;
+						}
 					}					
 
-					Log.warn("found room occupant with permissions " + perm);
+					ArrayList<JID> members = new ArrayList<>(mucRoom.getMembers());
+					Collections.sort(members);
+					
+					for (JID user : members) {
+						boolean isGroup = GroupJID.isGroup(user);					
+						
+						if (isGroup) {
+							Group group = GroupManager.getInstance().getGroup(user);
+							if (group.isUser(jid)) perm = 1;							
+						} else {
+							if (jid.toString().equals(user.toString())) perm = 1;
+						}
+					}										
+
+					Log.warn("found room permissions " + perm);
 					JSONArray permissions = new JSONArray();
 					
 					if (perm == 3) {

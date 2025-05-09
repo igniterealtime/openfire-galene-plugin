@@ -140,9 +140,21 @@ function ServerConnection() {
      * userdata is a convenient place to attach data to a ServerConnection.
      * It is not used by the library.
      *
-     * @type{Object<unknown,unknown>}
+     * @type {Object<unknown,unknown>}
      */
     this.userdata = {};
+    /**
+     * The time at which we last received a message from the server.
+     *
+     * @type {number}
+     */
+    this.lastServerMessage = null;
+    /**
+     * The interval handler which checks for liveness.
+     *
+     * @type {number}
+     */
+    this.pingHandler = null;
 
     /* Callbacks */
 
@@ -152,6 +164,13 @@ function ServerConnection() {
      * @type{(this: ServerConnection) => void}
      */
     this.onconnected = null;
+    /**
+     * onerror is called whenever a fatal error occurs.  The stream will
+     * then be closed, and onclose called normally.
+     *
+     * @type{(this: ServerConnection, error: unknown) => void}
+     */
+    this.onerror = null;
     /**
      * onclose is called when the connection is closed
      *
@@ -193,7 +212,7 @@ function ServerConnection() {
     /**
      * onchat is called whenever a new chat message is received.
      *
-     * @type {(this: ServerConnection, id: string, dest: string, username: string, time: Date, privileged: boolean, history: boolean, kind: string, message: unknown) => void}
+     * @type {(this: ServerConnection, id: string, source: string, dest: string, username: string, time: Date, privileged: boolean, history: boolean, kind: string, message: string) => void}
      */
     this.onchat = null;
     /**
@@ -264,6 +283,19 @@ ServerConnection.prototype.close = function() {
 };
 
 /**
+ * error forcibly closes a server connection and invokes the onerror
+ * callback.  The onclose callback will be invoked when the connection
+ * is effectively closed.
+ *
+ * @param {any} e
+ */
+ServerConnection.prototype.error = function(e) {
+    if(this.onerror)
+        this.onerror.call(this, e);
+    this.close();
+};
+
+/**
   * send sends a message to the server.
   * @param {message} m - the message to send.
   */
@@ -279,189 +311,219 @@ ServerConnection.prototype.send = function(m) {
  * connect connects to the server.
  *
  * @param {string} url - The URL to connect to.
- * @returns {Promise<ServerConnection>}
  * @function
  */
-ServerConnection.prototype.connect = async function(url) {
+ServerConnection.prototype.connect = function(url) {
     let sc = this;
-    if(sc.socket) {
-        sc.socket.close(1000, 'Reconnecting');
-        sc.socket = null;
-    }
+    if(sc.socket)
+        throw new Error("Attempting to connect stale connection");
 
     sc.socket = new WebSocket(url);
 
-    return await new Promise((resolve, reject) => {
-        this.socket.onerror = function(e) {
-            reject(e);
-        };
-        this.socket.onopen = function(e) {
+    this.pingHandler = setInterval(e => {
+        if(!sc.lastServerMessage) {
+            sc.error(new Error('Timeout'));
+            return;
+        }
+        let d = new Date().valueOf() - sc.lastServerMessage;
+        if(d > 65000) {
+            sc.error(new Error('Timeout'));
+            return;
+        }
+        if(sc.version && d >= 15000)
+            sc.send({type: 'ping'});
+    }, 10000);
+
+    this.socket.onerror = function(e) {
+        if(sc.onerror)
+            sc.onerror.call(sc, new Error('Socket error: ' + e));
+    };
+    this.socket.onopen = function(e) {
+        try {
             sc.send({
                 type: 'handshake',
-                version: ["2"],
+                version: ['2'],
                 id: sc.id,
             });
+        } catch(e) {
+            sc.error(e);
+            return;
+        }
+    };
+    this.socket.onclose = function(e) {
+        sc.permissions = [];
+        for(let id in sc.up) {
+            let c = sc.up[id];
+            c.close();
+        }
+        for(let id in sc.down) {
+            let c = sc.down[id];
+            c.close();
+        }
+        for(let id in sc.users) {
+            delete(sc.users[id]);
+            if(sc.onuser)
+                sc.onuser.call(sc, id, 'delete');
+        }
+        if(sc.group && sc.onjoined)
+            sc.onjoined.call(sc, 'leave', sc.group, [], {}, {}, '', '');
+        sc.group = null;
+        sc.username = null;
+        if(sc.pingHandler) {
+            clearInterval(sc.pingHandler);
+            sc.pingHandler = null;
+        }
+        if(sc.onclose)
+            sc.onclose.call(sc, e.code, e.reason);
+    };
+    this.socket.onmessage = function(e) {
+        let m;
+        try {
+            m = JSON.parse(e.data);
+        } catch(e) {
+            sc.error(e);
+            return;
+        }
+        if(m.type !== 'handshake' && !sc.version) {
+            sc.error(new Error("Server didn't send handshake"));
+            return;
+        }
+        sc.lastServerMessage = new Date().valueOf();
+        switch(m.type) {
+        case 'handshake': {
+            if((m.version instanceof Array) && m.version.includes('2')) {
+                sc.version = '2';
+            } else {
+                sc.version = null;
+                sc.error(new Error(`Unknown protocol version ${m.version}`));
+                return;
+            }
             if(sc.onconnected)
                 sc.onconnected.call(sc);
-            resolve(sc);
-        };
-        this.socket.onclose = function(e) {
-            sc.permissions = [];
-            for(let id in sc.up) {
-                let c = sc.up[id];
-                c.close();
-            }
-            for(let id in sc.down) {
-                let c = sc.down[id];
-                c.close();
-            }
-            for(let id in sc.users) {
-                delete(sc.users[id]);
-                if(sc.onuser)
-                    sc.onuser.call(sc, id, 'delete');
-            }
-            if(sc.group && sc.onjoined)
-                sc.onjoined.call(sc, 'leave', sc.group, [], {}, {}, '', '');
-            sc.group = null;
-            sc.username = null;
-            if(sc.onclose)
-                sc.onclose.call(sc, e.code, e.reason);
-            reject(new Error('websocket close ' + e.code + ' ' + e.reason));
-        };
-        this.socket.onmessage = function(e) {
-            let m = JSON.parse(e.data);
-            switch(m.type) {
-            case 'handshake': {
-                if(m.version === "2")
-                    sc.version = m.version;
-                else {
-                    console.error(`Unknown protocol version ${m.version}`);
-                    throw new Error(`Unknown protocol version ${m.version}`);
+            break;
+        }
+        case 'offer':
+            sc.gotOffer(m.id, m.label, m.source, m.username,
+                        m.sdp, m.replace);
+            break;
+        case 'answer':
+            sc.gotAnswer(m.id, m.sdp);
+            break;
+        case 'renegotiate':
+            sc.gotRenegotiate(m.id);
+            break;
+        case 'close':
+            sc.gotClose(m.id);
+            break;
+        case 'abort':
+            sc.gotAbort(m.id);
+            break;
+        case 'ice':
+            sc.gotRemoteIce(m.id, m.candidate);
+            break;
+        case 'joined':
+            if(m.kind === 'leave' || m.kind === 'fail') {
+                for(let id in sc.users) {
+                    delete(sc.users[id]);
+                    if(sc.onuser)
+                        sc.onuser.call(sc, id, 'delete');
                 }
-                break;
-            }
-            case 'offer':
-                sc.gotOffer(m.id, m.label, m.source, m.username,
-                            m.sdp, m.replace);
-                break;
-            case 'answer':
-                sc.gotAnswer(m.id, m.sdp);
-                break;
-            case 'renegotiate':
-                sc.gotRenegotiate(m.id);
-                break;
-            case 'close':
-                sc.gotClose(m.id);
-                break;
-            case 'abort':
-                sc.gotAbort(m.id);
-                break;
-            case 'ice':
-                sc.gotRemoteIce(m.id, m.candidate);
-                break;
-            case 'joined':
-                if(m.kind === 'leave' || m.kind === 'fail') {
-                    for(let id in sc.users) {
-                        delete(sc.users[id]);
-                        if(sc.onuser)
-                            sc.onuser.call(sc, id, 'delete');
-                    }
-                    sc.username = null;
-                    sc.permissions = [];
-                    sc.rtcConfiguration = null;
-                } else if(m.kind === 'join' || m.kind == 'change') {
-                    if(m.kind === 'join' && sc.group) {
-                        throw new Error('Joined multiple groups');
-                    } else if(m.kind === 'change' && m.group != sc.group) {
-                        console.warn('join(change) for inconsistent group');
-                        break;
-                    }
-                    sc.group = m.group;
-                    sc.username = m.username;
-                    sc.permissions = m.permissions || [];
-                    sc.rtcConfiguration = m.rtcConfiguration || null;
+                sc.username = null;
+                sc.permissions = [];
+                sc.rtcConfiguration = null;
+            } else if(m.kind === 'join' || m.kind == 'change') {
+                if(m.kind === 'join' && sc.group) {
+                    throw new Error('Joined multiple groups');
+                } else if(m.kind === 'change' && m.group != sc.group) {
+                    console.warn('join(change) for inconsistent group');
+                    break;
                 }
-                if(sc.onjoined)
-                    sc.onjoined.call(sc, m.kind, m.group,
-                                     m.permissions || [],
-                                     m.status, m.data,
-                                     m.error || null, m.value || null);
+                sc.group = m.group;
+                sc.username = m.username;
+                sc.permissions = m.permissions || [];
+                sc.rtcConfiguration = m.rtcConfiguration || null;
+            }
+            if(sc.onjoined)
+                sc.onjoined.call(sc, m.kind, m.group,
+                                 m.permissions || [],
+                                 m.status, m.data,
+                                 m.error || null, m.value || null);
+            break;
+        case 'user':
+            switch(m.kind) {
+            case 'add':
+                if(m.id in sc.users)
+                    console.warn(`Duplicate user ${m.id} ${m.username}`);
+                sc.users[m.id] = {
+                    username: m.username,
+                    permissions: m.permissions || [],
+                    data: m.data || {},
+                    streams: {},
+                };
                 break;
-            case 'user':
-                switch(m.kind) {
-                case 'add':
-                    if(m.id in sc.users)
-                        console.warn(`Duplicate user ${m.id} ${m.username}`);
+            case 'change':
+                if(!(m.id in sc.users)) {
+                    console.warn(`Unknown user ${m.id} ${m.username}`);
                     sc.users[m.id] = {
                         username: m.username,
                         permissions: m.permissions || [],
                         data: m.data || {},
                         streams: {},
                     };
-                    break;
-                case 'change':
-                    if(!(m.id in sc.users)) {
-                        console.warn(`Unknown user ${m.id} ${m.username}`);
-                        sc.users[m.id] = {
-                            username: m.username,
-                            permissions: m.permissions || [],
-                            data: m.data || {},
-                            streams: {},
-                        };
-                    } else {
-                        sc.users[m.id].username = m.username;
-                        sc.users[m.id].permissions = m.permissions || [];
-                        sc.users[m.id].data = m.data || {};
-                    }
-                    break;
-                case 'delete':
-                    if(!(m.id in sc.users))
-                        console.warn(`Unknown user ${m.id} ${m.username}`);
-                    for(let t in sc.transferredFiles) {
-                        let f = sc.transferredFiles[t];
-                        if(f.userid === m.id)
-                            f.fail('user has gone away');
-                    }
-                    delete(sc.users[m.id]);
-                    break;
-                default:
-                    console.warn(`Unknown user action ${m.kind}`);
-                    return;
+                } else {
+                    sc.users[m.id].username = m.username;
+                    sc.users[m.id].permissions = m.permissions || [];
+                    sc.users[m.id].data = m.data || {};
                 }
-                if(sc.onuser)
-                    sc.onuser.call(sc, m.id, m.kind);
                 break;
-            case 'chat':
-            case 'chathistory':
-                if(sc.onchat)
-                    sc.onchat.call(
-                        sc, m.source, m.dest, m.username, parseTime(m.time),
-                        m.privileged, m.type === 'chathistory', m.kind, m.value,
-                    );
-                break;
-            case 'usermessage':
-                if(m.kind === 'filetransfer')
-                    sc.fileTransfer(m.source, m.username, m.value);
-                else if(sc.onusermessage)
-                    sc.onusermessage.call(
-                        sc, m.source, m.dest, m.username, parseTime(m.time),
-                        m.privileged, m.kind, m.error, m.value,
-                    );
-                break;
-            case 'ping':
-                sc.send({
-                    type: 'pong',
-                });
-                break;
-            case 'pong':
-                /* nothing */
+            case 'delete':
+                if(!(m.id in sc.users))
+                    console.warn(`Unknown user ${m.id} ${m.username}`);
+                for(let t in sc.transferredFiles) {
+                    let f = sc.transferredFiles[t];
+                    if(f.userid === m.id)
+                        f.fail('user has gone away');
+                }
+                delete(sc.users[m.id]);
                 break;
             default:
-                console.warn('Unexpected server message', m.type);
+                console.warn(`Unknown user action ${m.kind}`);
                 return;
             }
-        };
-    });
+            if(sc.onuser)
+                sc.onuser.call(sc, m.id, m.kind);
+            break;
+        case 'chat':
+        case 'chathistory':
+            if(sc.onchat)
+                sc.onchat.call(
+                    sc, m.id, m.source, m.dest, m.username, parseTime(m.time),
+                    m.privileged, m.type === 'chathistory', m.kind,
+                    '' + m.value,
+                );
+            break;
+        case 'usermessage':
+            if(m.kind === 'filetransfer')
+                sc.fileTransfer(m.source, m.username, m.value);
+            else if(sc.onusermessage)
+                sc.onusermessage.call(
+                    sc, m.source, m.dest, m.username, parseTime(m.time),
+                    m.privileged, m.kind, m.error, m.value,
+                );
+            break;
+        case 'ping':
+            sc.send({
+                type: 'pong',
+            });
+            break;
+        case 'pong':
+            /* nothing */
+            break;
+        default:
+            console.warn('Unexpected server message', m.type);
+            return;
+        }
+    };
 };
 
 /**
@@ -1215,10 +1277,11 @@ Stream.prototype.close = function(replace) {
     let changed = recomputeUserStreams(c.sc, userid);
     if(changed && c.sc.onuser)
         c.sc.onuser.call(c.sc, userid, "change");
-    c.sc = null;
 
     if(c.onclose)
         c.onclose.call(c, replace);
+
+    c.sc = null;
 };
 
 /**
@@ -1466,7 +1529,7 @@ Stream.prototype.updateStats = async function() {
 
         if(report) {
             for(let r of report.values()) {
-                if(rtid && r.type === 'track') {
+                if(rtid && r.type === 'inbound-rtp') {
                     if(!('totalAudioEnergy' in r))
                         continue;
                     if(!stats[rtid])
@@ -1510,6 +1573,9 @@ Stream.prototype.setStatsInterval = function(ms) {
     }, ms);
 };
 
+/**
+ * @typedef {"" | "inviting" | "connecting" | "connected" | "done" | "cancelled" | "closed"} TransferredFileState
+ */
 
 /**
  * A file in the process of being transferred.
@@ -1521,13 +1587,14 @@ Stream.prototype.setStatsInterval = function(ms) {
  * any -> cancelled -> closed
  *
  *
- * @parm {ServerConnection} sc
- * @parm {string} userid
- * @parm {string} rid
- * @parm {boolean} up
- * @parm {string} username
- * @parm {string} mimetype
- * @parm {number} size
+ * @param {ServerConnection} sc
+ * @param {string} userid
+ * @param {string} id
+ * @param {boolean} up
+ * @param {string} username
+ * @param {string} name
+ * @param {string} mimetype
+ * @param {number} size
  * @constructor
  */
 function TransferredFile(sc, userid, id, up, username, name, mimetype, size) {
@@ -1548,6 +1615,16 @@ function TransferredFile(sc, userid, id, up, username, name, mimetype, size) {
      * @type {string}
      */
     this.id = id;
+    /**
+     * The negotiated file-transfer protocol version.
+     *
+     * This is the version of the file-transfer protocol, and is not
+     * necessarily equal to the version of the Galene protocol used by the
+     * server connection.
+     *
+     * @type {string}
+     */
+    this.version = null;
     /**
      * True if this is an upload.
      *
@@ -1630,7 +1707,7 @@ function TransferredFile(sc, userid, id, up, username, name, mimetype, size) {
      * in order to display a progress bar.  Call this.cancel in order
      * to cancel the transfer.
      *
-     * @type {(this: TransferredFile, type: string, [data]: string) => void}
+     * @type {(this: TransferredFile, state: TransferredFileState, [data]: string) => void}
      */
     this.onevent = null;
 }
@@ -1640,7 +1717,7 @@ function TransferredFile(sc, userid, id, up, username, name, mimetype, size) {
  * dictionary.
  */
 TransferredFile.prototype.fullid = function() {
-    return this.userid + (this.up ? '+' : '-') + this.id;
+    return this.userid + '-' + this.id;
 };
 
 /**
@@ -1648,11 +1725,10 @@ TransferredFile.prototype.fullid = function() {
  *
  * @param {string} userid
  * @param {string} fileid
- * @param {boolean} up
  * @returns {TransferredFile}
  */
-ServerConnection.prototype.getTransferredFile = function(userid, fileid, up) {
-    return this.transferredFiles[userid + (up ? '+' : '-') + fileid];
+ServerConnection.prototype.getTransferredFile = function(userid, fileid) {
+    return this.transferredFiles[userid + '-' + fileid];
 };
 
 /**
@@ -1672,8 +1748,10 @@ TransferredFile.prototype.close = function() {
         f.dc.onerror = null;
         f.dc.onmessage = null;
     }
-    if(f.pc)
+    if(f.pc) {
+        f.pc.onicecandidate = null;
         f.pc.close();
+    }
     f.dc = null;
     f.pc = null;
     f.data = [];
@@ -1725,7 +1803,7 @@ TransferredFile.prototype.getBufferedData = function() {
  * This calls the callback even if the state didn't change, which is
  * useful if the client needs to display a progress bar.
  *
- * @param {string} state
+ * @param {TransferredFileState} state
  * @param {any} [data]
  */
 TransferredFile.prototype.event = function(state, data) {
@@ -1735,6 +1813,26 @@ TransferredFile.prototype.event = function(state, data) {
         f.onevent.call(f, state, data);
 }
 
+/**
+ * Send a cancel message for a file transfer.
+ *
+ * Don't call this, call TransferredFile.cancel instead.
+ *
+ * @param {ServerConnection} sc
+ * @param {string} userid
+ * @param {string} id
+ * @param {string|Error} [message]
+ */
+function sendFileCancel(sc, userid, id, message) {
+    let m = {
+        type: 'cancel',
+        id: id,
+    };
+    if(message)
+        m.message = message.toString();
+    sc.userMessage('filetransfer', userid, m);
+}
+
 
 /**
  * Cancel a file transfer.
@@ -1742,23 +1840,16 @@ TransferredFile.prototype.event = function(state, data) {
  * Depending on the state, this will either forcibly close the connection,
  * send a handshake, or do nothing.  It will set the state to cancelled.
  *
- * @param {string|Error} [data]
+ * @param {string|Error} [message]
  */
-TransferredFile.prototype.cancel = function(data) {
+TransferredFile.prototype.cancel = function(message) {
     let f = this;
     if(f.state === 'closed')
         return;
-    if(f.state !== '' && f.state !== 'done' && f.state !== 'cancelled') {
-        let m = {
-            type: f.up ? 'cancel' : 'reject',
-            id: f.id,
-        };
-        if(data)
-            m.message = data.toString();
-        f.sc.userMessage('filetransfer', f.userid, m);
-    }
+    if(f.state !== '' && f.state !== 'done' && f.state !== 'cancelled')
+        sendFileCancel(f.sc, f.userid, f.id, message);
     if(f.state !== 'done' && f.state !== 'cancelled')
-        f.event('cancelled', data);
+        f.event('cancelled', message);
     f.close();
 }
 
@@ -1808,9 +1899,15 @@ ServerConnection.prototype.sendFile = function(id, file) {
         return;
     }
 
+    if(f.state === 'closed') {
+        // the client cancelled the transfer
+        return;
+    }
+
     sc.transferredFiles[f.fullid()] = f;
     sc.userMessage('filetransfer', id, {
         type: 'invite',
+        version: ["1"],
         id: fileid,
         name: f.name,
         size: f.size,
@@ -1850,7 +1947,7 @@ TransferredFile.prototype.receive = async function() {
     };
     pc.onicecandidate = function(e) {
         f.sc.userMessage('filetransfer', f.userid, {
-            type: 'downice',
+            type: 'ice',
             id: f.id,
             candidate: e.candidate,
         });
@@ -1877,6 +1974,7 @@ TransferredFile.prototype.receive = async function() {
     await pc.setLocalDescription(offer);
     f.sc.userMessage('filetransfer', f.userid, {
         type: 'offer',
+        version: [f.version],
         id: f.id,
         sdp: pc.localDescription.sdp,
     });
@@ -1906,7 +2004,7 @@ TransferredFile.prototype.answer = async function(sdp) {
     f.candidates = [];
     pc.onicecandidate = function(e) {
         f.sc.userMessage('filetransfer', f.userid, {
-            type: 'upice',
+            type: 'ice',
             id: f.id,
             candidate: e.candidate,
         });
@@ -2096,11 +2194,32 @@ ServerConnection.prototype.fileTransfer = function(id, username, message) {
     let sc = this;
     switch(message.type) {
     case 'invite': {
+        /** @type {string} */
+        let version;
+        if((message.version instanceof Array) && message.version.includes('1')) {
+            version = '1';
+        } else {
+            sendFileCancel(sc, id, message.id,
+                       `Unknown protocol version ${message.version}; ` +
+                       'perhaps you need to upgrade your client ?');
+            return;
+        }
+
         let f = new TransferredFile(
             sc, id, message.id, false, username,
             message.name, message.mimetype, message.size,
         );
+        f.version = version;
         f.state = 'inviting';
+
+        let fid = f.fullid();
+        if(fid in sc.transferredFiles) {
+            sendFileCancel(sc, id, message.id,
+                           'Duplicate file transfer id; ' +
+                           'perhaps you have tried to send a file to yourself?');
+            return;
+        }
+
 
         try {
             if(sc.onfiletransfer)
@@ -2114,37 +2233,38 @@ ServerConnection.prototype.fileTransfer = function(id, username, message) {
             return;
         }
 
-        if(f.fullid() in sc.transferredFiles) {
-            console.error('Duplicate id for file transfer');
-            f.cancel("duplicate id (this shouldn't happen)");
-            return;
-        }
-        sc.transferredFiles[f.fullid()] = f;
+        sc.transferredFiles[fid] = f;
         break;
     }
     case 'offer': {
-        let f = sc.getTransferredFile(id, message.id, true);
+        let f = sc.getTransferredFile(id, message.id);
         if(!f) {
-            console.error('Unexpected offer for file transfer');
+            console.error(`Unexpected ${message.type} for file transfer`);
+            return;
+        }
+        if((message.version instanceof Array) && message.version.includes('1')) {
+            f.version = '1';
+        } else {
+            f.cancel(`Unknown protocol version ${message.version}; ` +
+                     'perhaps you need to upgrade your client ?'
+                    );
             return;
         }
         f.answer(message.sdp).catch(e => f.cancel(e));
         break;
     }
     case 'answer': {
-        let f = sc.getTransferredFile(id, message.id, false);
+        let f = sc.getTransferredFile(id, message.id);
         if(!f) {
-            console.error('Unexpected answer for file transfer');
+            console.error(`Unexpected ${message.type} for file transfer`);
             return;
         }
         f.receiveFile(message.sdp).catch(e => f.cancel(e));
         break;
     }
-    case 'downice':
-    case 'upice': {
-        let f = sc.getTransferredFile(
-            id, message.id, message.type === 'downice',
-        );
+    case 'ice':
+        {
+        let f = sc.getTransferredFile(id, message.id);
         if(!f || !f.pc) {
             console.warn(`Unexpected ${message.type} for file transfer`);
             return;
@@ -2155,16 +2275,25 @@ ServerConnection.prototype.fileTransfer = function(id, username, message) {
             f.candidates.push(message.candidate);
         break;
     }
-    case 'cancel':
-    case 'reject': {
-        let f = sc.getTransferredFile(id, message.id, message.type === 'reject');
+    case 'cancel': {
+        let f = sc.getTransferredFile(id, message.id);
         if(!f) {
             console.error(`Unexpected ${message.type} for file transfer`);
             return;
         }
-        f.event('cancelled', message.value || null);
+        f.event('cancelled', message.message || null);
         f.close();
         break;
+    }
+    case 'upice':
+    case 'downice':
+    case 'reject':
+    case 'abort': {
+        let f = sc.getTransferredFile(id, message.id);
+        if(f)
+            f.cancel(`Obsolete file transfer message ${message.type};` +
+                     ' please upgrade your client');
+        return;
     }
     default:
         console.error(`Unknown filetransfer message ${message.type}`);

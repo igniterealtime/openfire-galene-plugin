@@ -99,6 +99,16 @@
     font-style: italic;
 }
 
+#chpwspan a {
+    padding: 4px 0;
+    font-size: 0.9em;
+    color: #e4157e;
+}
+
+#chpwspan.invisible {
+    display: none;
+}
+
 .sidenav .user-logout a {
     font-size: 1em;
     padding: 7px 0 0;
@@ -426,6 +436,10 @@ textarea.form-reply {
     margin-right: 0.33em;
 }
 
+.message-me-content {
+    white-space: pre-wrap;
+}
+
 .video-container {
     height: calc(var(--vh, 1vh) * 100 - 56px);
     position: relative;
@@ -701,17 +715,17 @@ h1 {
     font-weight: bold;
 }
 
-.userform {
+.login {
     display: inline
 }
 
-.userform label {
+.loginform label {
     min-width: 3em;
     display: inline-block;
     padding-top: 10px;
 }
 
-.userform input[type="text"], .userform input[type="password"] {
+.loginform input[type="text"], .loginform input[type="password"] {
     width: 100%;
 }
 
@@ -772,25 +786,21 @@ h1 {
 }
 
 #filterselect {
-    width: 8em;
     text-align-last: center;
     margin-right: 0.4em;
 }
 
 #sendselect {
-    width: 8em;
     text-align-last: center;
     margin-right: 0.4em;
 }
 
 #simulcastselect {
-    width: 8em;
     text-align-last: center;
     margin-right: 0.4em;
 }
 
 #requestselect {
-    width: 8em;
     text-align-last: center;
 }
 
@@ -1314,6 +1324,26 @@ header .collapse:hover {
 
 }
 
+#captions-container {
+    position: absolute;
+    bottom: 40px;
+    width: 100%;
+    pointer-events: none;
+    z-index: 1390;
+    alpha: 0;
+}
+
+#captions {
+    margin: auto;
+    padding: 0 0.4rem 0 0.4rem;
+    width: max-content;
+    font-size: 1.2rem;
+    text-align: center;
+    pointer-events: none;
+    background-color: rgba(255,255,255,.7);
+    color: #000;
+}
+
 :root{
     --contextualMenuBg: #eee;
     --contextualMenuShadow: 1px 1px 1px #444; */
@@ -1340,4 +1370,59 @@ header .collapse:hover {
 
 #invite-dialog {
     background-color: #eee;
+}
+
+#invite-dialog {
+    border: solid 2px #610a86;
+}
+
+#invite-dialog button {
+    background-color: #3355ff;
+    color: white;
+    border-radius: .5em;
+    padding: .5em;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    margin-right: 2em;
+    display: inline-block;
+    width: 7em;
+}
+
+#invite-dialog button:hover {
+   background-color: #0022ff;
+}
+
+#invite-dialog input {
+    margin-top: 1em;
+    width: 12em;
+    padding: .2em
+}
+
+#invite-dialog label {
+    margin-top: 1em;
+    display: inline-block;
+    width:12em;
+}
+
+/* Style for the toastify  messages shall be within a css file */
+.toastify.error {
+    background: linear-gradient(to right, #e20a0a, #df2d2d);
+    color: #fff;
+}
+.toastify.error .toast-close {
+    color: #fff;
+}
+.toastify.warning {
+    background: linear-gradient(to right, #bdc511, #c2cf01);
+    color: #000;
+}
+.toastify.warning .toast-close {
+    color: #000;
+}
+.toastify.info {
+    background: linear-gradient(to right, #529518, #96c93d);
+    color: #000;
+}
+.toastify.info .toast-close {
+    color: #000;
 }

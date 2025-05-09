@@ -8,11 +8,11 @@
     <link rel="stylesheet" type="text/css" href="/common.css"/>
     <link rel="stylesheet" type="text/css" href="/galene.css"/>
     <link rel="author" href="https://www.irif.fr/~jch/"/>
-    <link rel="stylesheet" type="text/css" href="/external/fontawesome/css/fontawesome.min.css"/>
-    <link rel="stylesheet" type="text/css" href="/external/fontawesome/css/solid.min.css"/>
-    <link rel="stylesheet" type="text/css" href="/external/fontawesome/css/regular.min.css"/>
-    <link rel="stylesheet" type="text/css" href="/external/toastify/toastify.css"/>
-    <link rel="stylesheet" type="text/css" href="/external/contextual/contextual.css"/>
+    <link rel="stylesheet" type="text/css" href="/third-party/fontawesome/css/fontawesome.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/third-party/fontawesome/css/solid.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/third-party/fontawesome/css/regular.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/third-party/toastify/toastify.css"/>
+    <link rel="stylesheet" type="text/css" href="/third-party/contextual/contextual.css"/>
   </head>
 
   <body>
@@ -99,12 +99,17 @@
                   <div id="peers"></div>
                 </div>
               </div>
+              <div id="captions-container" class="invisible">
+                <div id="captions"></div>
+              </div>
               <div class="login-container invisible" id="login-container">
                 <div class="login-box">
-                  <form id="userform" class="userform">
-                    <label for="username">Username</label>
-                    <input id="username" type="text" name="username"
-                           autocomplete="username" class="form-control"/>
+                  <form id="loginform" class="loginform">
+                    <div id="userform">
+                      <label for="username">Username</label>
+                      <input id="username" type="text" name="username"
+                             autocomplete="username" class="form-control"/>
+                    </div>
                     <div id="passwordform">
                       <label for="password">Password</label>
                       <input id="password" type="password" name="password"
@@ -153,6 +158,7 @@
             <div class="profile-info">
               <span id="userspan"></span>
               <span id="permspan"></span>
+              <span id="chpwspan" class="invisible"><a id="change-password">Change password</a></span>
             </div>
             <div class="user-logout">
               <a id="disconnectbutton">
@@ -294,11 +300,12 @@
         <br>
         <button id="invite-cancel" value="cancel" type="button">Cancel</button>
         <button value="invite" value="invite">Invite</button>
+      </form>
     </dialog>
 
     <script src="/protocol.js" defer></script>
-    <script src="/external/toastify/toastify.js" defer></script>
-    <script src="/external/contextual/contextual.js" defer></script>
+    <script src="/third-party/toastify/toastify.js" defer></script>
+    <script src="/third-party/contextual/contextual.js" defer></script>
     <script src="/galene.js" defer></script>
   </body>
 </html>

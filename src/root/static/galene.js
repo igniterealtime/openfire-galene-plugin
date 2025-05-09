@@ -20,23 +20,52 @@
 
 'use strict';
 
-/** @type {string} */
+/**
+ * The name of the group that we join.
+ *
+ * @type {string}
+ */
 let group;
 
-/** @type {ServerConnection} */
+/**
+ * The connection to the server.
+ *
+ * @type {ServerConnection}
+ */
 let serverConnection;
 
-/** @type {Object} */
+/**
+ * The group status.  This is set twice, once over HTTP in the start
+ * function in order to obtain the WebSocket address, and a second time
+ * after joining.
+ *
+ * @type {Object}
+ */
 let groupStatus = {};
 
-/** @type {string} */
-let token = null;
-
-/** @type {boolean} */
-let connectingAgain = false;
+/**
+ * True if we need to request a password.
+ *
+ * type {boolean}
+ */
+let pwAuth = false;
 
 /**
- * @typedef {Object} settings
+ * The token we use to login.  This is erased as soon as possible.
+ *
+ * @type {string}
+ */
+let token = null;
+
+/**
+ * The state of the login automaton.
+ *
+ * @type {"probing" | "need-username" | "success"}
+ */
+let probingState = null;
+
+/**
+ * @typedef {Object} settings - the type of stored settings
  * @property {boolean} [localMute]
  * @property {string} [video]
  * @property {string} [audio]
@@ -54,10 +83,18 @@ let connectingAgain = false;
  * @property {boolean} [forceRelay]
  */
 
-/** @type{settings} */
+/**
+ * fallbackSettings is used to store settings if session storage is not
+ * available.
+ *
+ * @type{settings}
+ */
 let fallbackSettings = null;
 
 /**
+ * Overwrite settings with the parameter.  This uses session storage if
+ * available, and the global variable fallbackSettings otherwise.
+ *
  * @param {settings} settings
  */
 function storeSettings(settings) {
@@ -71,7 +108,8 @@ function storeSettings(settings) {
 }
 
 /**
- * This always returns a dictionary.
+ * Return the current value of stored settings.  This always returns
+ * a dictionary, even when there are no stored settings.
  *
  * @returns {settings}
  */
@@ -89,6 +127,8 @@ function getSettings() {
 }
 
 /**
+ * Update stored settings with the key/value pairs stored in the parameter.
+ *
  * @param {settings} settings
  */
 function updateSettings(settings) {
@@ -99,6 +139,8 @@ function updateSettings(settings) {
 }
 
 /**
+ * Update a single key/value pair in the stored settings.
+ *
  * @param {string} key
  * @param {any} value
  */
@@ -109,6 +151,8 @@ function updateSetting(key, value) {
 }
 
 /**
+ * Remove a single key/value pair from the stored settings.
+ *
  * @param {string} key
  */
 function delSetting(key) {
@@ -120,6 +164,8 @@ function delSetting(key) {
 }
 
 /**
+ * getElementById, then assert that the result is an HTMLSelectElement.
+ *
  * @param {string} id
  */
 function getSelectElement(id) {
@@ -130,6 +176,8 @@ function getSelectElement(id) {
 }
 
 /**
+ * getElementById, then assert that the result is an HTMLInputElement.
+ *
  * @param {string} id
  */
 function getInputElement(id) {
@@ -140,6 +188,8 @@ function getInputElement(id) {
 }
 
 /**
+ * getElementById, then assert that the result is an HTMLButtonElement.
+ *
  * @param {string} id
  */
 function getButtonElement(id) {
@@ -149,6 +199,9 @@ function getButtonElement(id) {
     return elt;
 }
 
+/**
+ * Ensure that the UI reflects the stored settings.
+ */
 function reflectSettings() {
     let settings = getSettings();
     let store = false;
@@ -248,13 +301,18 @@ function reflectSettings() {
         storeSettings(settings);
 }
 
+/**
+ * Returns true if we should use the mobile layout.  This should be kept
+ * in sync with the CSS.
+ */
 function isMobileLayout() {
-    if (window.matchMedia('only screen and (max-width: 1024px)').matches)
-        return true;
-    return false;
+    return !!window.matchMedia('only screen and (max-width: 1024px)').matches
 }
 
 /**
+ * Conditionally hide the video pane.  If force is true, hide it even if
+ * there are videos.
+ *
  * @param {boolean} [force]
  */
 function hideVideo(force) {
@@ -265,6 +323,9 @@ function hideVideo(force) {
     scheduleReconsiderDownRate();
 }
 
+/**
+ * Show the video pane.
+ */
 function showVideo() {
     let hasmedia = document.getElementById('peers').childElementCount > 0;
     if(isMobileLayout()) {
@@ -275,22 +336,27 @@ function showVideo() {
     scheduleReconsiderDownRate();
 }
 
+/**
+ * Returns true if we are running on Safari.
+ */
 function isSafari() {
     let ua = navigator.userAgent.toLowerCase();
     return ua.indexOf('safari') >= 0 && ua.indexOf('chrome') < 0;
 }
 
+/**
+ * Returns true if we are running on Firefox.
+ */
 function isFirefox() {
     let ua = navigator.userAgent.toLowerCase();
     return ua.indexOf('firefox') >= 0;
 }
 
-/** @type {MediaStream} */
-let safariStream = null;
-
 /**
-  * @param{boolean} connected
-  */
+ * setConnected is called whenever we connect or disconnect to the server.
+ *
+ * @param{boolean} connected
+ */
 function setConnected(connected) {
     let userbox = document.getElementById('profile');
     let connectionbox = document.getElementById('login-container');
@@ -302,62 +368,94 @@ function setConnected(connected) {
         window.onresize = function(e) {
             scheduleReconsiderDownRate();
         }
-        if(isSafari()) {
-            /* Safari doesn't allow autoplay and omits host candidates
-             * unless there is Open one and keep it around. */
-            if(!safariStream) {
-                navigator.mediaDevices.getUserMedia({audio: true}).then(s => {
-                    safariStream = s;
-                });
-            }
-        }
     } else {
         userbox.classList.add('invisible');
         connectionbox.classList.remove('invisible');
-        if(!connectingAgain)
-            displayError('Disconnected', 'error');
         hideVideo();
         window.onresize = null;
     }
 }
 
 /**
+ * Called when we connect to the server.
+ *
  * @this {ServerConnection}
  */
 async function gotConnected() {
     setConnected(true);
-    let again = connectingAgain;
-    connectingAgain = false;
-    await join(again);
+    await join();
 }
 
 /**
- * @param {boolean} again
+ * Sets the href field of the "change password" link.
+ *
+ * @param {string} username
  */
-async function join(again) {
+function setChangePassword(username) {
+    let s = document.getElementById('chpwspan');
+    let a = s.children[0];
+    if(!(a instanceof HTMLAnchorElement))
+        throw new Error('Bad type for chpwspan');
+    if(username) {
+        a.href = `/change-password.html?group=${encodeURI(group)}&username=${encodeURI(username)}`;
+        a.target = '_blank';
+        s.classList.remove('invisible');
+    } else {
+        a.href = null;
+        s.classList.add('invisible');
+    }
+}
+
+/**
+ * Join a group.
+ */
+async function join() {
     let username = getInputElement('username').value.trim();
     let credentials;
     if(token) {
+        pwAuth = false;
         credentials = {
             type: 'token',
             token: token,
         };
-        if(!again)
-            // the first time around, we need to join with no username in
-            // order to give the server a chance to reply with 'need-username'.
+        switch(probingState) {
+        case null:
+            // when logging in with a token, we need to give the user
+            // a chance to interact with the page in order to enable
+            // autoplay.  Probe the group first in order to determine if
+            // we need a username.  We should really extend the protocol
+            // to have a simpler protocol for probing.
+            probingState = 'probing';
             username = null;
+            break;
+        case 'need-username':
+        case 'success':
+            probingState = null;
+            break
+        default:
+            console.warn(`Unexpected probing state ${probingState}`);
+            probingState = null;
+            break;
+        }
     } else {
+        if(probingState !== null) {
+            console.warn(`Unexpected probing state ${probingState}`);
+            probingState = null;
+        }
         let pw = getInputElement('password').value;
         getInputElement('password').value = '';
-        if(!groupStatus.authServer)
+        if(!groupStatus.authServer) {
+            pwAuth = true;
             credentials = pw;
-        else
+        } else {
+            pwAuth = false;
             credentials = {
                 type: 'authServer',
                 authServer: groupStatus.authServer,
                 location: location.href,
                 password: pw,
             };
+        }
     }
 
     try {
@@ -391,10 +489,15 @@ function onPeerConnection() {
  */
 function gotClose(code, reason) {
     closeUpMedia();
+    closeSafariStream();
     setConnected(false);
     if(code != 1000) {
         console.warn('Socket close', code, reason);
     }
+    let form = document.getElementById('loginform');
+    if(!(form instanceof HTMLFormElement))
+        throw new Error('Bad type for loginform');
+    form.active = true;
 }
 
 /**
@@ -408,9 +511,9 @@ function gotDownStream(c) {
     };
     c.onerror = function(e) {
         console.error(e);
-        displayError(e);
+        displayError(e.toString());
     };
-    c.ondowntrack = function(track, transceiver, label, stream) {
+    c.ondowntrack = function(track, transceiver, stream) {
         setMedia(c);
     };
     c.onnegotiationcompleted = function() {
@@ -475,33 +578,44 @@ function setVisibility(id, visible) {
         elt.classList.add('invisible');
 }
 
+/**
+ * Shows and hides various UI elements depending on the protocol state.
+ */
 function setButtonsVisibility() {
     let connected = serverConnection && serverConnection.socket;
     let permissions = serverConnection.permissions;
-    let present = permissions.indexOf('present') >= 0;
-    let local = !!findUpMedia('camera');
     let canWebrtc = !(typeof RTCPeerConnection === 'undefined');
+    let canPresent = canWebrtc &&
+        ('mediaDevices' in navigator) &&
+        ('getUserMedia' in navigator.mediaDevices) &&
+        permissions.indexOf('present') >= 0;
+    let canShare = canWebrtc &&
+        ('mediaDevices' in navigator) &&
+        ('getDisplayMedia' in navigator.mediaDevices) &&
+        permissions.indexOf('present') >= 0;
+    let local = !!findUpMedia('camera');
     let mediacount = document.getElementById('peers').childElementCount;
     let mobilelayout = isMobileLayout();
 
     // don't allow multiple presentations
-    setVisibility('presentbutton', canWebrtc && present && !local);
+    setVisibility('presentbutton', canPresent && !local);
     setVisibility('unpresentbutton', local);
 
-    setVisibility('mutebutton', !connected || present);
+    setVisibility('mutebutton', !connected || canPresent);
 
     // allow multiple shared documents
-    setVisibility('sharebutton', canWebrtc && present &&
-                  ('getDisplayMedia' in navigator.mediaDevices));
+    setVisibility('sharebutton', canShare);
 
-    setVisibility('mediaoptions', present);
-    setVisibility('sendform', present);
-    setVisibility('simulcastform', present);
+    setVisibility('mediaoptions', canPresent);
+    setVisibility('sendform', canPresent);
+    setVisibility('simulcastform', canPresent);
 
     setVisibility('collapse-video', mediacount && mobilelayout);
 }
 
 /**
+ * Sets the local mute state.  If reflect is true, updates the stored settings.
+ *
  * @param {boolean} mute
  * @param {boolean} [reflect]
  */
@@ -574,8 +688,12 @@ getInputElement('hqaudiobox').onchange = function(e) {
 document.getElementById('mutebutton').onclick = function(e) {
     e.preventDefault();
     let localMute = getSettings().localMute;
-    localMute = !localMute;
-    setLocalMute(localMute, true);
+    if (localMute && !findUpMedia('camera')) {
+        displayMessage('Please use Enable to enable your camera or microphone.');
+    } else {
+        localMute = !localMute;
+        setLocalMute(localMute, true);
+    }
 };
 
 document.getElementById('sharebutton').onclick = function(e) {
@@ -598,7 +716,11 @@ getSelectElement('filterselect').onchange = async function(e) {
     }
 };
 
-/** @returns {number} */
+/**
+ * Returns the desired max video throughput depending on the settings.
+ *
+ * @returns {number}
+ */
 function getMaxVideoThroughput() {
     let v = getSettings().send;
     switch(v) {
@@ -631,6 +753,8 @@ getSelectElement('simulcastselect').onchange = async function(e) {
 };
 
 /**
+ * Maps the state of the receive UI element to a protocol request.
+ *
  * @param {string} what
  * @returns {Object<string,Array<string>>}
  */
@@ -639,25 +763,22 @@ function mapRequest(what) {
     switch(what) {
     case '':
         return {};
-        break;
     case 'audio':
         return {'': ['audio']};
-        break;
     case 'screenshare':
         return {screenshare: ['audio','video'], '': ['audio']};
-        break;
     case 'everything-low':
         return {'': ['audio','video-low']};
-        break;
     case 'everything':
         return {'': ['audio','video']}
-        break;
     default:
         throw new Error(`Unknown value ${what} in request`);
     }
 }
 
 /**
+ * Like mapRequest, but for a single label.
+ *
  * @param {string} what
  * @param {string} label
  * @returns {Array<string>}
@@ -767,7 +888,7 @@ function gotDownStats(stats) {
     c.pc.getReceivers().forEach(r => {
         let tid = r.track && r.track.id;
         let s = tid && stats[tid];
-        let energy = s && s['track'] && s['track'].audioEnergy;
+        let energy = s && s['inbound-rtp'] && s['inbound-rtp'].audioEnergy;
         if(typeof energy === 'number')
             maxEnergy = Math.max(maxEnergy, energy);
     });
@@ -785,6 +906,8 @@ function gotDownStats(stats) {
 }
 
 /**
+ * Add an option to an HTMLSelectElement.
+ *
  * @param {HTMLSelectElement} select
  * @param {string} label
  * @param {string} [value]
@@ -813,6 +936,8 @@ function addSelectOption(select, label, value) {
 }
 
 /**
+ * Returns true if an HTMLSelectElement has an option with a given value.
+ *
  * @param {HTMLSelectElement} select
  * @param {string} value
  */
@@ -849,13 +974,20 @@ function selectOptionDefault(select) {
     return '';
 }
 
-/* media names might not be available before we call getDisplayMedia.  So
-   we call this twice, the second time to update the menu with user-readable
-   labels. */
-/** @type {boolean} */
+/**
+  * True if we already went through setMediaChoices twice.
+  *
+  * @type {boolean}
+  */
 let mediaChoicesDone = false;
 
 /**
+ * Populate the media choices menu.
+ *
+ * Since media names might not be available before we call
+ * getDisplayMedia, we call this function twice, the second time in order
+ * to update the menu with user-readable labels.
+ *
  * @param{boolean} done
  */
 async function setMediaChoices(done) {
@@ -864,7 +996,8 @@ async function setMediaChoices(done) {
 
     let devices = [];
     try {
-        devices = await navigator.mediaDevices.enumerateDevices();
+        if('mediaDevices' in navigator)
+            devices = await navigator.mediaDevices.enumerateDevices();
     } catch(e) {
         console.error(e);
         return;
@@ -977,11 +1110,10 @@ function cancelReconsiderParameters() {
 /**
  * @typedef {Object} filterDefinition
  * @property {string} [description]
- * @property {string} [contextType]
- * @property {Object} [contextAttributes]
- * @property {(this: Filter, ctx: RenderingContext) => void} [init]
- * @property {(this: Filter) => void} [cleanup]
- * @property {(this: Filter, src: CanvasImageSource, width: number, height: number, ctx: RenderingContext) => boolean} f
+ * @property {(this: filterDefinition) => Promise<boolean>} [predicate]
+ * @property {(this: Filter) => Promise<void>} [init]
+ * @property {(this: Filter) => Promise<void>} [cleanup]
+ * @property {(this: Filter, src: HTMLVideoElement, ctx: CanvasRenderingContext2D) => Promise<boolean>} draw
  */
 
 /**
@@ -1006,9 +1138,7 @@ function Filter(stream, definition) {
     /** @type {HTMLCanvasElement} */
     this.canvas = document.createElement('canvas');
     /** @type {any} */
-    this.context = this.canvas.getContext(
-        definition.contextType || '2d',
-        definition.contextAttributes || null);
+    this.context = this.canvas.getContext('2d');
     /** @type {MediaStream} */
     this.captureStream = null;
     /** @type {MediaStream} */
@@ -1023,7 +1153,11 @@ function Filter(stream, definition) {
     this.userdata = {}
     /** @type {MediaStream} */
     this.captureStream = this.canvas.captureStream(0);
+    /** @type {boolean} */
+    this.busy = false;
+}
 
+Filter.prototype.start = async function() {
     /** @ts-ignore */
     if(!this.captureStream.getTracks()[0].requestFrame) {
         console.warn('captureFrame not supported, using fixed framerate');
@@ -1039,15 +1173,20 @@ function Filter(stream, definition) {
         if(t.kind != 'video')
             this.outputStream.addTrack(t);
     });
-    this.video.srcObject = stream;
+    this.video.srcObject = this.inputStream;
     this.video.muted = true;
     this.video.play();
     if(this.definition.init)
-        this.definition.init.call(this, this.context);
+        await this.definition.init.call(this);
     this.timer = setInterval(() => this.draw(), 1000 / this.frameRate);
 }
 
-Filter.prototype.draw = function() {
+Filter.prototype.draw = async function() {
+    if(this.video.videoWidth === 0 && this.video.videoHeight === 0) {
+        // video not started yet
+        return;
+    }
+
     // check framerate every 30 frames
     if((this.count % 30) === 0) {
         let frameRate = 0;
@@ -1064,31 +1203,39 @@ Filter.prototype.draw = function() {
         }
     }
 
-    let ok = false;
-    try {
-        ok = this.definition.f.call(this, this.video,
-                                    this.video.videoWidth,
-                                    this.video.videoHeight,
-                                    this.context);
-    } catch(e) {
-        console.error(e);
-    }
-    if(ok && !this.fixedFramerate) {
-        /** @ts-ignore */
-        this.captureStream.getTracks()[0].requestFrame();
+    if(this.busy) {
+        // drop frame
+        return;
     }
 
-    this.count++;
+    try {
+        this.busy = true;
+        let ok = false;
+        try {
+            ok = await this.definition.draw.call(
+                this, this.video, this.context,
+            );
+        } catch(e) {
+            console.error(e);
+        }
+        if(ok && !this.fixedFramerate) {
+            /** @ts-ignore */
+            this.captureStream.getTracks()[0].requestFrame();
+        }
+        this.count++;
+    } finally {
+        this.busy = false;
+    }
 };
 
-Filter.prototype.stop = function() {
+Filter.prototype.stop = async function() {
     if(!this.timer)
         return;
     this.captureStream.getTracks()[0].stop();
     clearInterval(this.timer);
     this.timer = null;
     if(this.definition.cleanup)
-        this.definition.cleanup.call(this);
+        await this.definition.cleanup.call(this);
 };
 
 /**
@@ -1096,7 +1243,7 @@ Filter.prototype.stop = function() {
  *
  * @param {Stream} c
  */
-function removeFilter(c) {
+async function removeFilter(c) {
     let old = c.userdata.filter;
     if(!old)
         return;
@@ -1105,7 +1252,7 @@ function removeFilter(c) {
         throw new Error('userdata.filter is not a filter');
 
     c.setStream(old.inputStream);
-    old.stop();
+    await old.stop();
     c.userdata.filter = null;
 }
 
@@ -1114,15 +1261,40 @@ function removeFilter(c) {
  *
  * @param {Stream} c
  */
-function setFilter(c) {
-    removeFilter(c);
+async function setFilter(c) {
+    await removeFilter(c);
 
     if(!c.userdata.filterDefinition)
         return;
 
     let filter = new Filter(c.stream, c.userdata.filterDefinition);
+    await filter.start();
     c.setStream(filter.outputStream);
     c.userdata.filter = filter;
+}
+
+/**
+ * Sends a message to a worker, then waits for a reply.
+ *
+ * @param {Worker} worker
+ * @param {any} message
+ * @param {any[]} [transfer]
+ */
+async function workerSendReceive(worker, message, transfer) {
+    let p = new Promise((resolve, reject) => {
+        worker.onmessage = e => {
+            if(e && e.data) {
+                if(e.data instanceof Error)
+                    reject(e.data);
+                else
+                    resolve(e.data);
+            } else {
+                resolve(null);
+            }
+        };
+    });
+    worker.postMessage(message, transfer);
+    return await p
 }
 
 /**
@@ -1131,39 +1303,172 @@ function setFilter(c) {
 let filters = {
     'mirror-h': {
         description: "Horizontal mirror",
-        f: function(src, width, height, ctx) {
+        draw: async function(src, ctx) {
             if(!(ctx instanceof CanvasRenderingContext2D))
                 throw new Error('bad context type');
-            if(ctx.canvas.width !== width || ctx.canvas.height !== height) {
-                ctx.canvas.width = width;
-                ctx.canvas.height = height;
+            if(ctx.canvas.width !== src.videoWidth ||
+               ctx.canvas.height !== src.videoHeight) {
+                ctx.canvas.width = src.videoWidth;
+                ctx.canvas.height = src.videoHeight;
             }
             ctx.scale(-1, 1);
-            ctx.drawImage(src, -width, 0);
+            ctx.drawImage(src, -src.videoWidth, 0);
             ctx.resetTransform();
             return true;
         },
     },
     'mirror-v': {
         description: "Vertical mirror",
-        f: function(src, width, height, ctx) {
+        draw: async function(src, ctx) {
             if(!(ctx instanceof CanvasRenderingContext2D))
                 throw new Error('bad context type');
-            if(ctx.canvas.width !== width || ctx.canvas.height !== height) {
-                ctx.canvas.width = width;
-                ctx.canvas.height = height;
+            if(ctx.canvas.width !== src.videoWidth ||
+               ctx.canvas.height !== src.videoHeight) {
+                ctx.canvas.width = src.videoWidth;
+                ctx.canvas.height = src.videoHeight;
             }
             ctx.scale(1, -1);
-            ctx.drawImage(src, 0, -height);
+            ctx.drawImage(src, 0, -src.videoHeight);
             ctx.resetTransform();
+            return true;
+        },
+    },
+    'rotate': {
+        description: 'Rotate',
+        draw: async function(src, ctx) {
+            if(!(ctx instanceof CanvasRenderingContext2D))
+                throw new Error('bad context type');
+            if(ctx.canvas.width !== src.videoWidth ||
+               ctx.canvas.height !== src.videoHeight) {
+                ctx.canvas.width = src.videoWidth;
+                ctx.canvas.height = src.videoHeight;
+            }
+            ctx.scale(-1, -1);
+            ctx.drawImage(src, -src.videoWidth, -src.videoHeight);
+            ctx.resetTransform();
+            return true;
+        },
+    },
+    'background-blur': {
+        description: 'Background blur',
+        predicate: async function() {
+            let r = await fetch('/third-party/tasks-vision/vision_bundle.js', {
+                method: 'HEAD',
+            });
+            if(!r.ok) {
+                if(r.status !== 404)
+                    console.warn(
+                        `Fetch vision_bundle.js: ${r.status} ${r.statusText}`,
+                    );
+                return false;
+            }
+            return true;
+        },
+        init: async function(ctx) {
+            if(!(this instanceof Filter))
+                throw new Error('Bad type for this');
+            if(this.userdata.worker)
+                throw new Error("Worker already running (this shouldn't happen)")
+            this.userdata.worker = new Worker('/background-blur-worker.js');
+            await workerSendReceive(this.userdata.worker, {
+                model: '/third-party/tasks-vision/models/selfie_segmenter.tflite',
+            });
+        },
+        cleanup: async function() {
+            if(this.userdata.worker.onmessage) {
+                this.userdata.worker.onmessage(null);
+            }
+            this.userdata.worker.terminate();
+            this.userdata.worker = null;
+        },
+        draw: async function(src, ctx) {
+            let bitmap = await createImageBitmap(src);
+            try {
+                let result = await workerSendReceive(this.userdata.worker, {
+                    bitmap: bitmap,
+                    timestamp: performance.now(),
+                }, [bitmap]);
+
+                if(!result)
+                    return false;
+
+                let mask = result.mask;
+                bitmap = result.bitmap;
+
+                if(ctx.canvas.width !== src.videoWidth ||
+                   ctx.canvas.height !== src.videoHeight) {
+                    ctx.canvas.width = src.videoWidth;
+                    ctx.canvas.height = src.videoHeight;
+                }
+
+                // set the alpha mask, background is opaque
+                ctx.globalCompositeOperation = 'copy';
+                ctx.drawImage(mask, 0, 0);
+
+                // rather than blurring the original image, we first mask
+                // the background then blur, this avoids a halo effect
+                ctx.globalCompositeOperation = 'source-in';
+                ctx.drawImage(result.bitmap, 0, 0);
+		if('filter' in ctx) {
+                    ctx.globalCompositeOperation = 'copy';
+                    ctx.filter = `blur(${src.videoWidth / 48}px)`;
+                    ctx.drawImage(ctx.canvas, 0, 0);
+                    ctx.filter = 'none';
+		} else {
+		    // Safari bug 198416, context.filter is not supported.
+
+                    // Work around typescript inferring ctx as none
+                    ctx = /**@type{CanvasRenderingContext2D}*/(ctx);
+
+		    let scale = 24;
+		    let swidth = src.videoWidth / scale;
+		    let sheight = src.videoHeight / scale;
+		    if(!('canvas' in this.userdata))
+			this.userdata.canvas = document.createElement('canvas');
+                    /** @type {HTMLCanvasElement} */
+		    let c2 = this.userdata.canvas;
+		    if(c2.width != swidth)
+			c2.width = swidth;
+		    if(c2.height != sheight)
+			c2.height = sheight;
+		    let ctx2 = c2.getContext('2d');
+		    // scale down the background
+		    ctx2.globalCompositeOperation = 'copy';
+		    ctx2.drawImage(ctx.canvas,
+				   0, 0, src.videoWidth, src.videoHeight,
+				   0, 0, swidth, sheight,
+				  );
+		    // scale back up, composite atop the original background
+		    ctx.globalCompositeOperation = 'source-atop';
+		    ctx.drawImage(ctx2.canvas,
+				  0, 0,
+				  src.videoWidth / scale,
+				  src.videoHeight / scale,
+				  0, 0, src.videoWidth, src.videoHeight,
+				 );
+		}
+
+		// now draw the foreground
+                ctx.globalCompositeOperation = 'destination-atop';
+                ctx.drawImage(result.bitmap, 0, 0);
+                ctx.globalCompositeOperation = 'source-over';
+
+                mask.close();
+            } finally {
+                bitmap.close();
+            }
             return true;
         },
     },
 };
 
-function addFilters() {
+async function addFilters() {
     for(let name in filters) {
         let f = filters[name];
+        if(f.predicate) {
+            if(!(await f.predicate.call(f)))
+                continue;
+        }
         let d = f.description || name;
         addSelectOption(getSelectElement('filterselect'), d, name);
     }
@@ -1208,20 +1513,15 @@ function doSimulcast() {
  * @param {MediaStream} stream
  */
 
-function setUpStream(c, stream) {
+async function setUpStream(c, stream) {
     if(c.stream != null)
         throw new Error("Setting nonempty stream");
 
     c.setStream(stream);
 
-    try {
-        setFilter(c);
-    } catch(e) {
-        displayWarning("Couldn't set filter: " + e);
-    }
-
-    c.onclose = replace => {
-        removeFilter(c);
+    // set up the handler early, in case setFilter fails.
+    c.onclose = async replace => {
+        await removeFilter(c);
         if(!replace) {
             stopStream(c.stream);
             if(c.userdata.onclose)
@@ -1229,6 +1529,8 @@ function setUpStream(c, stream) {
             delMedia(c.localId);
         }
     }
+
+    await setFilter(c);
 
     /**
      * @param {MediaStreamTrack} t
@@ -1343,7 +1645,7 @@ function setUpStream(c, stream) {
  * @returns {Promise<Stream>}
  */
 async function replaceUpStream(c) {
-    removeFilter(c);
+    await removeFilter(c);
     let cn = newUpStream(c.localId);
     cn.label = c.label;
     if(c.userdata.filterDefinition)
@@ -1352,10 +1654,20 @@ async function replaceUpStream(c) {
         cn.userdata.onclose = c.userdata.onclose;
     let media = /** @type{HTMLVideoElement} */
         (document.getElementById('media-' + c.localId));
-    setUpStream(cn, c.stream);
+    try {
+        await setUpStream(cn, c.stream);
+    } catch(e) {
+        console.error(e);
+        displayError(e);
+        cn.close();
+        c.close();
+        return null;
+    }
+
     await setMedia(cn,
                    cn.label == 'camera' && getSettings().mirrorView,
                    cn.label == 'video' && media);
+
     return cn;
 }
 
@@ -1391,7 +1703,9 @@ function replaceCameraStream() {
 async function addLocalMedia(localId) {
     let settings = getSettings();
 
+    /** @type{boolean|MediaTrackConstraints} */
     let audio = settings.audio ? {deviceId: settings.audio} : false;
+    /** @type{boolean|MediaTrackConstraints} */
     let video = settings.video ? {deviceId: settings.video} : false;
 
     if(video) {
@@ -1402,6 +1716,8 @@ async function addLocalMedia(localId) {
         } else if(settings.blackboardMode) {
             video.width = { min: 640, ideal: 1920 };
             video.height = { min: 400, ideal: 1080 };
+        } else {
+            video.aspectRatio = { ideal: 4/3 };
         }
     }
 
@@ -1416,7 +1732,7 @@ async function addLocalMedia(localId) {
     let old = serverConnection.findByLocalId(localId);
     if(old) {
         // make sure that the camera is released before we try to reopen it
-        removeFilter(old);
+        await removeFilter(old);
         stopStream(old.stream);
     }
 
@@ -1452,8 +1768,14 @@ async function addLocalMedia(localId) {
             displayWarning(`Unknown filter ${settings.filter}`);
     }
 
-    setUpStream(c, stream);
-    await setMedia(c, settings.mirrorView);
+    try {
+        await setUpStream(c, stream);
+        await setMedia(c, settings.mirrorView);
+    } catch(e) {
+        console.error(e);
+        displayError(e);
+        c.close();
+    }
     setButtonsVisibility();
 }
 
@@ -1491,7 +1813,7 @@ async function addShareMedia() {
 
     let c = newUpStream();
     c.label = 'screenshare';
-    setUpStream(c, stream);
+    await setUpStream(c, stream);
     await setMedia(c);
     setButtonsVisibility();
 }
@@ -1575,8 +1897,10 @@ function closeUpMedia(label) {
  * @returns {Stream}
  */
 function findUpMedia(label) {
+    if(!serverConnection)
+        return null;
     for(let id in serverConnection.up) {
-        let c = serverConnection.up[id]
+        let c = serverConnection.up[id];
         if(c.label === label)
             return c;
     }
@@ -2023,6 +2347,13 @@ function setMediaStatus(c) {
     } else {
         media.classList.add('media-failed');
     }
+
+    if(!c.up && state === 'failed') {
+        let from = c.username ?
+            `from user ${c.username}` :
+            'from anonymous user';
+        displayWarning(`Cannot receive media ${from}, still trying...`);
+    }
 }
 
 
@@ -2127,7 +2458,7 @@ function inviteMenu() {
     let d = /** @type {HTMLDialogElement} */
         (document.getElementById('invite-dialog'));
     if(!('HTMLDialogElement' in window) || !d.showModal) {
-        makeToken();
+        displayError("This browser doesn't support modal dialogs");
         return;
     }
     d.returnValue = '';
@@ -2143,7 +2474,7 @@ function inviteMenu() {
     let ex = getInputElement('invite-expires');
     let expires = new Date(now);
     expires.setDate(expires.getDate() + 2);
-    ex.min = dateToInput(expires);
+    ex.min = dateToInput(now);
     ex.value = dateToInput(expires);
     d.showModal();
 }
@@ -2239,6 +2570,9 @@ function userMenu(elt) {
             }});
             items.push({label: 'Kick out', onClick: () => {
                 serverConnection.userAction('kick', id);
+            }});
+            items.push({label: 'Identify', onClick: () => {
+                serverConnection.userAction('identify', id);
             }});
         }
     }
@@ -2412,9 +2746,32 @@ function setTitle(title) {
         set('Galène');
 }
 
+/**
+ * Under Safari, we request access to the camera at startup in order to
+ * enable autoplay.  The camera stream is stored in safariStream.
+ *
+ * @type {MediaStream}
+ */
+let safariStream = null;
+
+async function openSafariStream() {
+    if(!isSafari())
+        return;
+
+    if(!safariStream)
+        safariStream = await navigator.mediaDevices.getUserMedia({audio: true})
+}
+
+async function closeSafariStream() {
+    if(!safariStream)
+        return;
+    stopStream(safariStream);
+    safariStream = null;
+}
 
 /**
  * @this {ServerConnection}
+ * @param {string} kind
  * @param {string} group
  * @param {Array<string>} perms
  * @param {Object<string,any>} status
@@ -2428,47 +2785,62 @@ async function gotJoined(kind, group, perms, status, data, error, message) {
 
     switch(kind) {
     case 'fail':
-        if(error === 'need-username' || error === 'duplicate-username') {
+        if(probingState === 'probing' && error === 'need-username') {
+            probingState = 'need-username';
             setVisibility('passwordform', false);
-            connectingAgain = true;
         } else {
             token = null;
-        }
-        if(error !== 'need-username')
             displayError('The server said: ' + message);
+        }
+        closeSafariStream();
         this.close();
         setButtonsVisibility();
         return;
     case 'redirect':
+        closeSafariStream();
         this.close();
         token = null;
         document.location.href = message;
         return;
     case 'leave':
+        closeSafariStream();
         this.close();
-        token = null;
         setButtonsVisibility();
+        setChangePassword(null);
         return;
     case 'join':
     case 'change':
-        token = null;
+        if(probingState === 'probing') {
+            probingState = 'success';
+            setVisibility('userform', false);
+            setVisibility('passwordform', false);
+            closeSafariStream();
+            this.close();
+            setButtonsVisibility();
+            return;
+        } else {
+            token = null;
+        }
         // don't discard endPoint and friends
         for(let key in status)
             groupStatus[key] = status[key];
         setTitle((status && status.displayName) || capitalise(group));
         displayUsername();
         setButtonsVisibility();
+        setChangePassword(pwAuth && !!groupStatus.canChangePassword &&
+                          serverConnection.username
+        );
+        openSafariStream();
         if(kind === 'change')
             return;
         break;
     default:
         token = null;
         displayError('Unknown join message');
+        closeSafariStream();
         this.close();
         return;
     }
-
-    token = null;
 
     let input = /** @type{HTMLTextAreaElement} */
         (document.getElementById('input'));
@@ -2483,7 +2855,9 @@ async function gotJoined(kind, group, perms, status, data, error, message) {
     else
         this.request(mapRequest(getSettings().request));
 
-    if(serverConnection.permissions.indexOf('present') >= 0 &&
+    if(('mediaDevices' in navigator) &&
+       ('getUserMedia' in navigator.mediaDevices) &&
+       serverConnection.permissions.indexOf('present') >= 0 &&
        !findUpMedia('camera')) {
         if(present) {
             if(present === 'mike')
@@ -2715,13 +3089,16 @@ function gotUserMessage(id, dest, username, time, privileged, kind, error, messa
         let by = username ? ' by ' + username : '';
         displayWarning(`You have been muted${by}`);
         break;
-    case 'clearchat':
+    case 'clearchat': {
         if(!privileged) {
             console.error(`Got unprivileged message of kind ${kind}`);
             return;
         }
-        clearChat();
+        let id = message && message.id;
+        let userId = message && message.userId;
+        clearChat(id, userId);
         break;
+    }
     case 'token':
         if(!privileged) {
             console.error(`Got unprivileged message of kind ${kind}`);
@@ -2764,6 +3141,19 @@ function gotUserMessage(id, dest, username, time, privileged, kind, error, messa
             s = s + f[0] + ': ' + f[1] + "\n";
         }
         localMessage(s);
+        break;
+    case 'userinfo':
+        if(!privileged) {
+            console.error(`Got unprivileged message of kind ${kind}`);
+            return;
+        }
+        let u = message.username ?
+            'username ' + message.username :
+            'unknown username';
+        let a = message.address ?
+            'address ' + message.address :
+            'unknown address';
+        localMessage(`User ${message.id} has ${u} and ${a}.`);
         break;
     default:
         console.warn(`Got unknown user message ${kind}`);
@@ -2817,18 +3207,18 @@ function formatToken(token, details) {
 const urlRegexp = /https?:\/\/[-a-zA-Z0-9@:%/._\\+~#&()=?]+[-a-zA-Z0-9@:%/_\\+~#&()=]/g;
 
 /**
- * @param {string} line
- * @returns {Array.<Text|HTMLElement>}
+ * @param {string} text
+ * @returns {HTMLDivElement}
  */
-function formatLine(line) {
+function formatText(text) {
     let r = new RegExp(urlRegexp);
     let result = [];
     let pos = 0;
     while(true) {
-        let m = r.exec(line);
+        let m = r.exec(text);
         if(!m)
             break;
-        result.push(document.createTextNode(line.slice(pos, m.index)));
+        result.push(document.createTextNode(text.slice(pos, m.index)));
         let a = document.createElement('a');
         a.href = m[0];
         a.textContent = m[0];
@@ -2837,25 +3227,13 @@ function formatLine(line) {
         result.push(a);
         pos = m.index + m[0].length;
     }
-    result.push(document.createTextNode(line.slice(pos)));
-    return result;
-}
+    result.push(document.createTextNode(text.slice(pos)));
 
-/**
- * @param {string[]} lines
- * @returns {HTMLElement}
- */
-function formatLines(lines) {
-    let elts = [];
-    if(lines.length > 0)
-        elts = formatLine(lines[0]);
-    for(let i = 1; i < lines.length; i++) {
-        elts.push(document.createElement('br'));
-        elts = elts.concat(formatLine(lines[i]));
-    }
-    let elt = document.createElement('p');
-    elts.forEach(e => elt.appendChild(e));
-    return elt;
+    let div = document.createElement('div');
+    result.forEach(e => {
+        div.appendChild(e);
+    });
+    return div;
 }
 
 /**
@@ -2882,6 +3260,7 @@ function formatTime(time) {
 let lastMessage = {};
 
 /**
+ * @param {string} id
  * @param {string} peerId
  * @param {string} dest
  * @param {string} nick
@@ -2889,9 +3268,14 @@ let lastMessage = {};
  * @param {boolean} privileged
  * @param {boolean} history
  * @param {string} kind
- * @param {unknown} message
+ * @param {string|HTMLElement} message
  */
-function addToChatbox(peerId, dest, nick, time, privileged, history, kind, message) {
+function addToChatbox(id, peerId, dest, nick, time, privileged, history, kind, message) {
+    if(kind === 'caption') {
+        displayCaption(message);
+        return;
+    }
+
     let row = document.createElement('div');
     row.classList.add('message-row');
     let container = document.createElement('div');
@@ -2906,8 +3290,32 @@ function addToChatbox(peerId, dest, nick, time, privileged, history, kind, messa
     if(dest)
         container.classList.add('message-private');
 
+    if(id)
+        container.dataset.id = id;
+    if(peerId) {
+        container.dataset.peerId = peerId;
+        container.dataset.username = nick;
+        container.addEventListener('click', function(e) {
+            if(e.detail !== 2)
+                return;
+            let elt = e.currentTarget;
+            if(!elt || !(elt instanceof HTMLElement))
+                throw new Error("Couldn't find chat message div");
+            chatMessageMenu(elt);
+        });
+    }
+
+    /** @type{HTMLElement} */
+    let body;
+    if(message instanceof HTMLElement) {
+        body = message;
+    } else if(typeof message === 'string') {
+        body = formatText(message);
+    } else {
+        throw new Error('Cannot add element to chatbox');
+    }
+
     if(kind !== 'me') {
-        let p = formatLines(message.toString().split('\n'));
         let doHeader = true;
         if(lastMessage.nick !== (nick || null) ||
            lastMessage.peerId !== (peerId || null) ||
@@ -2939,6 +3347,8 @@ function addToChatbox(peerId, dest, nick, time, privileged, history, kind, messa
             }
         }
 
+        let p = document.createElement('p');
+        p.appendChild(body);
         p.classList.add('message-content');
         container.appendChild(p);
         lastMessage.nick = (nick || null);
@@ -2952,14 +3362,10 @@ function addToChatbox(peerId, dest, nick, time, privileged, history, kind, messa
         let user = document.createElement('span');
         user.textContent = nick || '(anon)';
         user.classList.add('message-me-user');
-        let content = document.createElement('span');
-        formatLine(message.toString()).forEach(elt => {
-            content.appendChild(elt);
-        });
-        content.classList.add('message-me-content');
+        body.classList.add('message-me-content');
         container.appendChild(asterisk);
         container.appendChild(user);
-        container.appendChild(content);
+        container.appendChild(body);
         container.classList.add('message-me');
         lastMessage = {};
     }
@@ -2971,19 +3377,118 @@ function addToChatbox(peerId, dest, nick, time, privileged, history, kind, messa
         box.scrollTop = box.scrollHeight - box.clientHeight;
     }
 
-    return message;
+    return;
 }
 
 /**
- * @param {string} message
+ * @param {HTMLElement} elt
  */
-function localMessage(message) {
-    return addToChatbox(null, null, null, new Date(), false, false, '', message);
+function chatMessageMenu(elt) {
+    if(!(serverConnection && serverConnection.permissions &&
+         serverConnection.permissions.indexOf('op') >= 0))
+        return;
+
+    let messageId = elt.dataset.id;
+    let peerId = elt.dataset.peerId;
+    if(!peerId)
+        return;
+    let username = elt.dataset.username;
+    let u = username || 'user';
+
+    let items = [];
+    if(messageId)
+        items.push({label: 'Delete message', onClick: () => {
+            serverConnection.groupAction('clearchat', {
+                id: messageId,
+                userId: peerId,
+            });
+        }});
+    items.push({label: `Delete all from ${u}`,
+                onClick: () => {
+                    serverConnection.groupAction('clearchat', {
+                        userId: peerId,
+                    });
+                }});
+    items.push({label: `Identify ${u}`, onClick: () => {
+        serverConnection.userAction('identify', peerId);
+    }});
+    items.push({label: `Kick out ${u}`, onClick: () => {
+        serverConnection.userAction('kick', peerId);
+    }});
+
+    /** @ts-ignore */
+    new Contextual({
+        items: items,
+    });
 }
 
-function clearChat() {
+/**
+ * @param {string|HTMLElement} message
+ */
+function setCaption(message) {
+    let container = document.getElementById('captions-container');
+    let captions = document.getElementById('captions');
+    if(!message) {
+        captions.replaceChildren();
+        container.classList.add('invisible');
+    } else {
+        if(message instanceof HTMLElement)
+            captions.replaceChildren(message);
+        else
+            captions.textContent = message;
+        container.classList.remove('invisible');
+    }
+}
+
+let captionsTimer = null;
+
+/**
+ * @param {string|HTMLElement} message
+ */
+function displayCaption(message) {
+    if(captionsTimer != null) {
+        clearTimeout(captionsTimer);
+        captionsTimer = null;
+    }
+    setCaption(message);
+    captionsTimer = setTimeout(() => setCaption(null), 3000);
+}
+
+/**
+ * @param {string|HTMLElement} message
+ */
+function localMessage(message) {
+    return addToChatbox(null, null, null, null, new Date(), false, false, '', message);
+}
+
+/**
+ * @param {string} [id]
+ * @param {string} [userId]
+ */
+function clearChat(id, userId) {
     lastMessage = {};
-    document.getElementById('box').textContent = '';
+
+    let box = document.getElementById('box');
+    if(!id && !userId) {
+        box.textContent = '';
+        return;
+    }
+
+    let elts = box.children;
+    let i = 0;
+    while(i < elts.length) {
+        let row = elts.item(i);
+        if(row instanceof HTMLDivElement) {
+            let div = row.firstChild;
+            if(div instanceof HTMLDivElement)
+                if((!id || div.dataset.id === id) &&
+                   div.dataset.peerId === userId) {
+                    box.removeChild(row);
+                    continue;
+                }
+        }
+        i++;
+    }
 }
 
 /**
@@ -3194,10 +3699,13 @@ function makeToken(template) {
         v["not-before"] = template["not-before"];
     if('permissions' in template)
         v.permissions = template.permissions;
-    else if(serverConnection.permissions.indexOf('present') >= 0)
-        v.permissions = ['present'];
-    else
+    else {
         v.permissions = [];
+        if(serverConnection.permissions.indexOf('present') >= 0)
+            v.permissions.push('present');
+        if(serverConnection.permissions.indexOf('message') >= 0)
+            v.permissions.push('message');
+    }
     serverConnection.groupAction('maketoken', v);
 }
 
@@ -3288,6 +3796,12 @@ commands.replace = {
     }
 };
 
+commands.stopshare = {
+    description: 'stop screen share',
+    f: (c, r) => {
+        closeUpMedia('screenshare');
+    }
+}
 
 /**
  * parseCommand splits a string into two space-separated parts.  The first
@@ -3349,7 +3863,7 @@ commands.msg = {
         if(!id)
             throw new Error(`Unknown user ${p[0]}`);
         serverConnection.chat('', id, p[1]);
-        addToChatbox(serverConnection.id, id, serverConnection.username,
+        addToChatbox(serverConnection.id, null, id, serverConnection.username,
                      new Date(), false, false, '', p[1]);
     }
 };
@@ -3385,6 +3899,13 @@ commands.kick = {
     f: userCommand,
 };
 
+commands.identify = {
+    parameters: 'user [message]',
+    description: 'identify a user',
+    predicate: operatorPredicate,
+    f: userCommand,
+};
+
 commands.op = {
     parameters: 'user',
     description: 'give operator status',
@@ -3409,6 +3930,20 @@ commands.present = {
 commands.unpresent = {
     parameters: 'user',
     description: 'revoke the right to present',
+    predicate: operatorPredicate,
+    f: userCommand,
+};
+
+commands.shutup = {
+    parameters: 'user',
+    description: 'revoke the right to send chat messages',
+    predicate: operatorPredicate,
+    f: userCommand,
+};
+
+commands.unshutup = {
+    parameters: 'user',
+    description: 'give the right to send chat messages',
     predicate: operatorPredicate,
     f: userCommand,
 };
@@ -3733,18 +4268,15 @@ document.getElementById('resizer').addEventListener('mousedown', chatResizer, fa
 function displayError(message, level) {
     if(!level)
         level = "error";
-    var background = 'linear-gradient(to right, #e20a0a, #df2d2d)';
-    var position = 'center';
-    var gravity = 'top';
+    let position = 'center';
+    let gravity = 'top';
 
     switch(level) {
     case "info":
-        background = 'linear-gradient(to right, #529518, #96c93d)';
         position = 'right';
         gravity = 'bottom';
         break;
     case "warning":
-        background = "linear-gradient(to right, #bdc511, #c2cf01)";
         break;
     case "kicked":
         level = "error";
@@ -3758,9 +4290,6 @@ function displayError(message, level) {
         close: true,
         position: position,
         gravity: gravity,
-        style: {
-            background: background,
-        },
         className: level,
     }).showToast();
 }
@@ -3779,12 +4308,12 @@ function displayMessage(message) {
     return displayError(message, "info");
 }
 
-let connecting = false;
-
-document.getElementById('userform').onsubmit = async function(e) {
+document.getElementById('loginform').onsubmit = async function(e) {
     e.preventDefault();
-    if(connecting)
-        return;
+
+    let form = this;
+    if(!(form instanceof HTMLFormElement))
+        throw new Error('Bad type for loginform');
 
     setVisibility('passwordform', true);
 
@@ -3797,12 +4326,8 @@ document.getElementById('userform').onsubmit = async function(e) {
     getInputElement('presentoff').checked = true;
 
     // Connect to the server, gotConnected will join.
-    connecting = true;
-    try {
-        await serverConnect();
-    } finally {
-        connecting = false;
-    }
+    form.active = false;
+    serverConnect();
 };
 
 document.getElementById('disconnectbutton').onclick = function(e) {
@@ -3873,6 +4398,10 @@ async function serverConnect() {
         serverConnection.close();
     serverConnection = new ServerConnection();
     serverConnection.onconnected = gotConnected;
+    serverConnection.onerror = function(e) {
+        console.error(e);
+        displayError(e.toString());
+    };
     serverConnection.onpeerconnection = onPeerConnection;
     serverConnection.onclose = gotClose;
     serverConnection.ondownstream = gotDownStream;
@@ -3898,7 +4427,7 @@ async function serverConnect() {
 
 async function start() {
     try {
-        let r = await fetch(".status.json")
+        let r = await fetch(".status")
         if(!r.ok)
             throw new Error(`${r.status} ${r.statusText}`);
         groupStatus = await r.json()
@@ -3927,7 +4456,8 @@ async function start() {
     setTitle(groupStatus.displayName || capitalise(group));
 
     addFilters();
-    setMediaChoices(false).then(e => reflectSettings());
+    await setMediaChoices(false);
+    reflectSettings();
 
     if(parms.has('token'))
         token = parms.get('token');

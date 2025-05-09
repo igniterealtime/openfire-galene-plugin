@@ -37,6 +37,7 @@ import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.websocket.servlet.*;
 import org.eclipse.jetty.websocket.server.*;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.proxy.ProxyServlet;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -66,6 +67,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     private Path galeneRoot;
     private ExecutorService executor;
     private WebAppContext jspService;
+    private ServletContextHandler galeneContext;	
     private GaleneIQHandler galeneIQHandler;
     private RayoIQHandler rayoIQHandler;
 	private GaleneConnection adminConnection;
@@ -83,6 +85,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
             if (executor != null)  executor.shutdown();
             if (galeneThread != null) galeneThread.destory();
             if (jspService != null) HttpBindManager.getInstance().removeJettyHandler(jspService);
+            if (galeneContext != null) HttpBindManager.getInstance().removeJettyHandler(galeneContext);			
 		
             XMPPServer.getInstance().getIQRouter().removeHandler(galeneIQHandler);
 			galeneIQHandler.stopHandler();
@@ -132,6 +135,10 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
     public static String getPortRangeMax() {
         return "20000";
+    }
+
+    public static String getPortMux() {
+        return "10000";
     }
 	
     public static String getTurnPort() {
@@ -207,11 +214,24 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
             setupGaleneFiles();
 			
 			String updMin = JiveGlobals.getProperty("galene.port.range.min", getPortRangeMin());
-			String updMax = JiveGlobals.getProperty("galene.port.range.max", getPortRangeMax());			
-            String turn = JiveGlobals.getProperty("galene.turn.ipaddr", getIpAddress()) + ":" + JiveGlobals.getProperty("galene.turn.port", "10014");
-            String params = "--insecure=true --http=:" + getPort() + " --turn=" + turn + " --udp-range=" + updMin + "-" + updMax;
+			String updMax = JiveGlobals.getProperty("galene.port.range.max", getPortRangeMax());
+			String updMux = JiveGlobals.getProperty("galene.port.mux", getPortMux());
+			
+			boolean turnEnabled = JiveGlobals.getBooleanProperty("galene.turn.enabled", false);
+            String turn = JiveGlobals.getProperty("galene.turn.ipaddr", getIpAddress()) + ":" + JiveGlobals.getProperty("galene.turn.port", "3478");
+			String portValue = JiveGlobals.getBooleanProperty("galene.mux.enabled", false) ? updMux : (updMin + "-" + updMax);
+            String params = "--insecure=true --http=:" + getPort() + (turnEnabled ? " --turn=" + turn : "")  + " --udp-range=" + portValue;
             
 			galeneThread = Spawn.startProcess(galeneExePath + " " + params, new File(galeneHomePath), this);
+			
+            galeneContext = new ServletContextHandler(null, "/", ServletContextHandler.SESSIONS);
+            galeneContext.setClassLoader(this.getClass().getClassLoader());			
+            ServletHolder proxyServlet = new ServletHolder(ProxyServlet.Transparent.class);
+            String galeneUrl = "http://" + JiveGlobals.getProperty("galene.ipaddr", getIpAddress()) + ":" + JiveGlobals.getProperty("galene.port", getPort());
+            proxyServlet.setInitParameter("proxyTo", galeneUrl);
+            proxyServlet.setInitParameter("prefix", "/");
+            galeneContext.addServlet(proxyServlet, "/*");
+            HttpBindManager.getInstance().addJettyHandler(galeneContext);			
 			
 			try
 			{	
@@ -662,9 +682,9 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			String username = JiveGlobals.getProperty("galene.username", "sfu-admin");
 			
 			JSONObject useraction = new JSONObject();
-			useraction.put("source", id);
+			useraction.put("source", connection.getId());
 			useraction.put("dest", id);
-			useraction.put("username", connection.getId());
+			useraction.put("username", id);
 			useraction.put("kind", "kick");
 			useraction.put("value", "");
 			sendMessage("useraction", useraction, connection);			

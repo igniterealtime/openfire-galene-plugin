@@ -29,6 +29,9 @@
 		
         String portRangeMax = request.getParameter("port_range_max");     
         JiveGlobals.setProperty("galene.port.range.max", portRangeMax); 		
+
+        String portMux = request.getParameter("port_mux");     
+        JiveGlobals.setProperty("galene.port.mux", portMux); 
         
         String ipaddr = request.getParameter("ipaddr");     
         JiveGlobals.setProperty("galene.ipaddr", ipaddr);   
@@ -41,12 +44,18 @@
         
         String url = request.getParameter("url");     
         JiveGlobals.setProperty("galene.url", url);         
-        
+
         String muc_enabled = request.getParameter("muc_enabled");
         JiveGlobals.setProperty("galene.muc.enabled", (muc_enabled != null && muc_enabled.equals("on")) ? "true": "false");     
 
         String enabled = request.getParameter("enabled");
-        JiveGlobals.setProperty("galene.enabled", (enabled != null && enabled.equals("on")) ? "true": "false");  
+        JiveGlobals.setProperty("galene.enabled", (enabled != null && enabled.equals("on")) ? "true": "false"); 
+        
+        String mux_enabled = request.getParameter("mux_enabled");
+        JiveGlobals.setProperty("galene.mux.enabled", (mux_enabled != null && mux_enabled.equals("on")) ? "true": "false");     
+
+        String turn_enabled = request.getParameter("turn_enabled");
+        JiveGlobals.setProperty("galene.turn.enabled", (turn_enabled != null && turn_enabled.equals("on")) ? "true": "false");  
 
 		plugin.setupGaleneFiles(); 		
     }
@@ -88,7 +97,19 @@
                     <input type="checkbox" name="muc_enabled"<%= (JiveGlobals.getProperty("galene.muc.enabled", "false").equals("true")) ? " checked" : "" %>>
                     <fmt:message key="config.page.configuration.muc.enabled" />       
                 </td>  
-            </tr>			
+            </tr>		
+            <tr>
+                <td nowrap  colspan="2">
+                    <input type="checkbox" name="mux_enabled"<%= (JiveGlobals.getProperty("galene.mux.enabled", "false").equals("true")) ? " checked" : "" %>>
+                    <fmt:message key="config.page.configuration.mux.enabled" />       
+                </td>  
+            </tr>	
+            <tr>
+                <td nowrap  colspan="2">
+                    <input type="checkbox" name="turn_enabled"<%= (JiveGlobals.getProperty("galene.turn.enabled", "false").equals("true")) ? " checked" : "" %>>
+                    <fmt:message key="config.page.configuration.turn.enabled" />       
+                </td>  
+            </tr>				
             <tr>
                 <td align="left" width="150">
                     <fmt:message key="config.page.configuration.username"/>
@@ -135,6 +156,14 @@
                 </td>
                 <td><input type="text" size="50" maxlength="100" name="port_range_max" required
                        value="<%= JiveGlobals.getProperty("galene.port.range.max", plugin.getPortRangeMax()) %>">
+                </td>                               
+            </tr>	
+            <tr>
+                <td align="left" width="150">
+                    <fmt:message key="config.page.configuration.port.mux"/>
+                </td>
+                <td><input type="text" size="50" maxlength="100" name="port_mux" required
+                       value="<%= JiveGlobals.getProperty("galene.port.mux", plugin.getPortMux()) %>">
                 </td>                               
             </tr>			
             <tr>
