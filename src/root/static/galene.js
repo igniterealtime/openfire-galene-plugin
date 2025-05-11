@@ -4411,12 +4411,15 @@ async function serverConnect() {
     serverConnection.onusermessage = gotUserMessage;
     serverConnection.onfiletransfer = gotFileTransfer;
 
-    let url = groupStatus.endpoint;
+	// BAO
+    /*let url = groupStatus.endpoint;
     if(!url) {
         console.warn("no endpoint in status");
         url = `ws${location.protocol === 'https:' ? 's' : ''}://${location.host}/ws`;
-    }
+    }*/
 
+	let url = `ws${location.protocol === 'https:' ? 's' : ''}://${location.host}/galene-ws/`;
+ 
     try {
         await serverConnection.connect(url);
     } catch(e) {

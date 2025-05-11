@@ -34,8 +34,10 @@ import org.eclipse.jetty.plus.annotation.ContainerInitializer;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.servlets.*;
 import org.eclipse.jetty.servlet.*;
+import org.eclipse.jetty.websocket.server.config.JettyWebSocketServletContainerInitializer;
 import org.eclipse.jetty.websocket.servlet.*;
 import org.eclipse.jetty.websocket.server.*;
+import org.eclipse.jetty.websocket.server.config.*;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.eclipse.jetty.proxy.ProxyServlet;
 
@@ -67,7 +69,8 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     private Path galeneRoot;
     private ExecutorService executor;
     private WebAppContext jspService;
-    private ServletContextHandler galeneContext;	
+    private ServletContextHandler galeneContext;
+    private ServletContextHandler galeneWsContext;	
     private GaleneIQHandler galeneIQHandler;
     private RayoIQHandler rayoIQHandler;
 	private GaleneConnection adminConnection;
@@ -85,7 +88,12 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
             if (executor != null)  executor.shutdown();
             if (galeneThread != null) galeneThread.destory();
             if (jspService != null) HttpBindManager.getInstance().removeJettyHandler(jspService);
-            if (galeneContext != null) HttpBindManager.getInstance().removeJettyHandler(galeneContext);			
+            if (galeneContext != null) HttpBindManager.getInstance().removeJettyHandler(galeneContext);	
+
+			if (galeneWsContext != null) {
+				HttpBindManager.getInstance().removeJettyHandler(galeneWsContext);
+				galeneWsContext.destroy();
+			}			
 		
             XMPPServer.getInstance().getIQRouter().removeHandler(galeneIQHandler);
 			galeneIQHandler.stopHandler();
@@ -213,6 +221,17 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
             createAdminUser();
             setupGaleneFiles();
 			
+			galeneWsContext = new ServletContextHandler(ServletContextHandler.SESSIONS);
+			galeneWsContext.setContextPath("/galene-ws");
+
+			JettyWebSocketServletContainerInitializer.configure(galeneWsContext, (servletContext, wsContainer) ->
+			{
+				wsContainer.setMaxTextMessageSize(65535);
+				wsContainer.addMapping("/*", new GaleneSocketCreator());
+			});	
+
+			HttpBindManager.getInstance().addJettyHandler(galeneWsContext);				
+			
 			String updMin = JiveGlobals.getProperty("galene.port.range.min", getPortRangeMin());
 			String updMax = JiveGlobals.getProperty("galene.port.range.max", getPortRangeMax());
 			String updMux = JiveGlobals.getProperty("galene.port.mux", getPortMux());
@@ -249,6 +268,39 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
             Log.info("Galene disabled");
         }
     }
+	
+    public static class GaleneSocketCreator implements JettyWebSocketCreator
+    {
+        @Override public Object createWebSocket(JettyServerUpgradeRequest req, JettyServerUpgradeResponse resp)
+        {			
+			String ipaddr = JiveGlobals.getProperty("galene.ipaddr", getIpAddress());
+			String port = JiveGlobals.getProperty("galene.port", getPort());
+
+            HttpServletRequest request = req.getHttpServletRequest();
+            String path = request.getRequestURI();
+            String query = request.getQueryString();
+            List<String> protocols = new ArrayList<String>();
+
+            for (String subprotocol : req.getSubProtocols())
+            {
+                Log.debug("WSocketCreator found protocol " + subprotocol);
+                resp.setAcceptedSubProtocol(subprotocol);
+                protocols.add(subprotocol);
+            }
+
+            if (query != null) path += "?" + query;
+
+            Log.debug("GaleneSocketCreator " + path + " " + query);
+            String url = "ws://" + ipaddr + ":" + port + "/ws";
+
+            ProxyWebSocket socket = null;
+            ProxyConnection proxyConnection = new ProxyConnection(URI.create(url), protocols, 10000);
+
+            socket = new ProxyWebSocket();
+            socket.setProxyConnection(proxyConnection);
+            return socket;
+        }
+    }	
 
     private void checkNatives(File pluginDirectory)
     {
