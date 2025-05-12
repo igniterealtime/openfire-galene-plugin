@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.*;
 import javax.xml.bind.DatatypeConverter;
-
 import java.io.*;
 import java.net.*;
 import java.security.*;
@@ -35,22 +34,30 @@ import org.jivesoftware.openfire.XMPPServer;
 import net.sf.json.*;
 import org.dom4j.Element;
 import org.xmpp.packet.*;
+import org.ifsoft.galene.openfire.Galene;
 
-
-public class ProxyConnection
-{
+public class ProxyConnection implements Serializable {
     private static Logger Log = LoggerFactory.getLogger( "ProxyConnection" );
     private ProxyWebSocket socket;
     private boolean connected = false;
-
+	
+	public JID jid;		
+	public String username = "";		
+	public String password = "";		
+	public String room = "";		
+	public String id = "";
+	
     private WebSocketClient wsClient = null;
 	private HttpClient httpClient = null;
     private ProxySocket proxySocket = null;
     private final boolean isSecure;
+	private String adminUsername;
 
-    public ProxyConnection(URI uri, List<String> subprotocol, int connectTimeout)
+    public ProxyConnection(URI uri, List<String> subprotocol, int connectTimeout, JID jid)
     {
-        Log.debug("ProxyConnection " + uri + " " + subprotocol);
+        Log.debug("ProxyConnection " + uri + " " + subprotocol+ " " + jid);
+		this.jid = jid;	
+		adminUsername = JiveGlobals.getProperty("galene.username", "sfu-admin");		
 
         if("wss".equals(uri.getScheme()))
         {
@@ -87,6 +94,14 @@ public class ProxyConnection
             connected = false;
         }
     }
+	
+	public String getFullId() {
+		return jid != null ? jid.toBareJID() : "";
+	}
+	
+	public String getId() {
+		return jid != null ? jid.getNode() : "";
+	}	
 
     public void setSocket( ProxyWebSocket socket ) {
         this.socket = socket;
@@ -96,8 +111,7 @@ public class ProxyConnection
     {
         Log.debug("ProxyConnection - deliver \n" + text);
 
-        if (proxySocket != null)
-        {
+        if (proxySocket != null) {
             proxySocket.deliver(text);
         }
     }
@@ -106,13 +120,11 @@ public class ProxyConnection
     {
         Log.debug("ProxyConnection - stop");
 
-        try
-        {
+        try {
             if (wsClient != null) wsClient.stop();
             if (httpClient != null) httpClient.stop();			
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             Log.error("ProxyConnection - stop", e);
         }
     }
@@ -132,17 +144,36 @@ public class ProxyConnection
         if (this.socket != null) this.socket.disconnect();
     }
 
+	
     public void onMessage(String text) {
-        Log.debug("ProxyConnection - onMessage \n" + text);
+        Log.debug("ProxyConnection - onMessage \n" + text);	// from galene server session
 
         try {
-            this.socket.deliver(text);
-        }
-
-        catch (Exception e) {
-            Log.error("deliverRawText error", e);
-        }
-    }
+			if (jid == null) {
+				this.socket.deliver(text);	// send to galene web client				
+				
+			} else {
+				
+				if (jid.getNode().equals(adminUsername)) {
+					Galene.self.onMessage(text);	// send to admin user endpoint
+				
+				} else {				
+					IQ iq = new IQ(IQ.Type.set);
+					iq.setTo(jid);
+					iq.setType(IQ.Type.set);
+					iq.setFrom(XMPPServer.getInstance().getServerInfo().getHostname());
+					Element galene = iq.setChildElement("s2c", "urn:xmpp:sfu:galene:0");
+					Element json = galene.addElement("json", "urn:xmpp:json:0");
+					json.setText(text);
+					XMPPServer.getInstance().getIQRouter().route(iq);	// send to xmpp client
+					
+				}
+			}			
+		}
+		catch (Exception e) {
+			Log.error("deliverRawText error", e);
+		}			
+    }	
 
     public boolean isSecure() {
         return isSecure;
@@ -194,17 +225,15 @@ public class ProxyConnection
         return sc;
     }
 
-    @WebSocket(maxTextMessageSize = 64 * 1024) public class ProxySocket
+ 	@WebSocket(maxTextMessageSize = 64 * 1024) public class ProxySocket
     {
         private Session session;
         private ProxyConnection proxyConnection;
-        private String lastMessage = null;
-        private String ipaddr = null;
 
         public ProxySocket(ProxyConnection proxyConnection)
         {
             this.proxyConnection = proxyConnection;
-        }
+        }		
 
         @OnWebSocketError public void onError(Throwable t)
         {
@@ -222,33 +251,28 @@ public class ProxyConnection
         {
             Log.debug("ProxySocket onConnect: " + session);
             this.session = session;
-
-            if (lastMessage != null) deliver(lastMessage);
         }
 
         @OnWebSocketMessage public void onMessage(String msg)
         {
-            Log.debug("ProxySocket onMessage text \n" + msg);
-            if (proxyConnection != null) proxyConnection.onMessage(msg);
+            Log.debug("ProxySocket onMessage \n" + msg);
+			
+            if (proxyConnection != null) {
+				proxyConnection.onMessage(msg);	
+			}				
         }
-		
-		@OnWebSocketMessage public void onMessage(byte[] data, int offset, int length)  
-		{
-            Log.debug("ProxySocket onMessage binary \n" + data);
-		}		
 
         public void deliver(String text)
         {
-            if (session != null)
-            {
-                try {
-                    Log.debug("ProxySocket deliver: \n" + text);
-                    session.getRemote().sendString(text);
-                    lastMessage = null;
-                } catch (Exception e) {
-                    Log.error("ProxySocket deliver", e);
-                }
-            } else lastMessage = text;
+            try {
+                Log.debug("ProxySocket deliver: \n" + text);
+
+                while (session == null) Thread.sleep(1000);
+
+                session.getRemote().sendString(text);
+            } catch (Exception e) {
+                Log.error("ProxySocket deliver", e);
+            }
         }
 
         public void disconnect()

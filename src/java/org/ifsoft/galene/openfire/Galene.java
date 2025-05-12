@@ -63,6 +63,7 @@ import org.xmpp.packet.*;
 public class Galene implements Plugin, PropertyEventListener, ProcessListener, MUCEventListener
 {
     private static final Logger Log = LoggerFactory.getLogger(Galene.class);
+	private String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
     private XProcess galeneThread = null;
     private String galeneExePath = null;
     private String galeneHomePath = null;
@@ -73,7 +74,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     private ServletContextHandler galeneWsContext;	
     private GaleneIQHandler galeneIQHandler;
     private RayoIQHandler rayoIQHandler;
-	private GaleneConnection adminConnection;
+	private ProxyConnection adminConnection;
     private Cache muc_properties;		
 	
     public static Galene self;	
@@ -176,12 +177,12 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
     public void onOutputLine(final String line)
     {
-        Log.info("onOutputLine " + line);
+        Log.debug("onOutputLine " + line);
     }
 
     public void onProcessQuit(int code)
     {
-        Log.info("onProcessQuit " + code);
+        Log.debug("onProcessQuit " + code);
     }
 
     public void onOutputClosed() {
@@ -190,7 +191,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
     public void onErrorLine(final String line)
     {
-        Log.info(line);
+        Log.debug(line);
     }
 
     public void onError(final Throwable t)
@@ -209,7 +210,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         jspService.setAttribute("org.eclipse.jetty.containerInitializers", initializers);
         jspService.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
 
-        Log.info("Galene jsp service enabled");
+        Log.debug("Galene jsp service enabled");
         HttpBindManager.getInstance().addJettyHandler(jspService);
     }
 
@@ -294,7 +295,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
             String url = "ws://" + ipaddr + ":" + port + "/ws";
 
             ProxyWebSocket socket = null;
-            ProxyConnection proxyConnection = new ProxyConnection(URI.create(url), protocols, 10000);
+            ProxyConnection proxyConnection = new ProxyConnection(URI.create(url), protocols, 10000, null);
 
             socket = new ProxyWebSocket();
             socket.setProxyConnection(proxyConnection);
@@ -344,14 +345,14 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         file.setReadable(true, true);
         file.setWritable(true, true);
         file.setExecutable(true, true);
-        Log.info("checkNatives galene executable path " + path);
+        Log.debug("checkNatives galene executable path " + path);
     }
 
     public void setupGaleneFiles()
     {
         String iniFileName = galeneHomePath + "/data/config.json";
         List<String> lines = new ArrayList<String>();
-        Log.info("Creating config " + iniFileName);
+        Log.debug("Creating config " + iniFileName);
 
 		/*
 		{
@@ -406,7 +407,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
         if ( !userManager.isRegisteredUser( new JID(administrator + "@" + XMPPServer.getInstance().getServerInfo().getXMPPDomain()), false ) )
         {
-            Log.info( "No administrator user detected. Generating one." );
+            Log.debug( "No administrator user detected. Generating one." );
 
             try
             {
@@ -471,7 +472,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		if (body != null && !GaleneIQHandler.connections.containsKey(from)) {
 			Log.debug("messageReceived " + from + " " + room + "\n" + body);
 			
-			for (GaleneConnection conn : GaleneIQHandler.connections.values()) 
+			for (ProxyConnection conn : GaleneIQHandler.connections.values()) 
 			{
 				if (room.equals(conn.room)) {
 					JSONObject json = new JSONObject();
@@ -621,7 +622,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			List<String> lines = new ArrayList<String>();
 			lines.add(json.toString());
 
-			Log.info("Creating " + iniFileName);
+			Log.debug("Creating " + iniFileName);
 
 			try
 			{
@@ -672,11 +673,12 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     //-------------------------------------------------------	
 	
 	private void startAdminConnection() {
+		String username = JiveGlobals.getProperty("galene.username", "sfu-admin");	
 		String galenePort = JiveGlobals.getProperty("galene.port", Galene.self.getPort());		
-		String url = "ws://localhost:" + galenePort + "/ws";		
-		adminConnection = new GaleneConnection(URI.create(url), 10000, null);
+		String url = "ws://localhost:" + galenePort + "/ws";	
 		
-		String username = JiveGlobals.getProperty("galene.username", "sfu-admin");
+		adminConnection = new ProxyConnection(URI.create(url), new ArrayList<String>(), 10000, new JID(username + "@" + domain));
+		
 		JSONObject handshake = new JSONObject();
 		handshake.put("id", username);
 		handshake.put("version", new JSONArray("[\"2\"]"));
@@ -684,19 +686,23 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 	}	
 	
 	public void onMessage(String text) {
-		//Log.info("S2Amin \n" + text);
+		Log.debug("S2Amin \n" + text);
 		JSONObject message = new JSONObject(text);
 
 		if (message.has("type")) {
-			if ("handshake".equals(message.getString("type"))) Log.info("Galene Administrator user connected"); 
-			if ("ping".equals(message.getString("type"))) sendMessage("pong", new JSONObject(), adminConnection);
+			if ("handshake".equals(message.getString("type"))) {
+				Log.debug("Galene Administrator user connected"); 
+				if (message.has("id")) adminConnection.id = message.getString("id");
+			}
+			
+			if ("ping".equals(message.getString("type"))) sendMessage("pong", new JSONObject(), adminConnection);			
 		}
 	}
 
-	private void sendMessage(String type, JSONObject payload, GaleneConnection connection) {
+	private void sendMessage(String type, JSONObject payload, ProxyConnection connection) {
 		payload.put("type", type);			
 		String text = payload.toString();
-		//Log.info("Admin2S \n" + text);
+		//Log.debug("Admin2S \n" + text);
 		connection.deliver(text);
 	}
 
@@ -730,13 +736,12 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		*/ 
 		
 		if (GaleneIQHandler.clients.containsKey(id)) {	
-			GaleneConnection connection	= GaleneIQHandler.clients.get(id);
-			String username = JiveGlobals.getProperty("galene.username", "sfu-admin");
+			ProxyConnection connection	= GaleneIQHandler.clients.get(id);
 			
 			JSONObject useraction = new JSONObject();
-			useraction.put("source", connection.getId());
+			useraction.put("source", connection.id);
 			useraction.put("dest", id);
-			useraction.put("username", id);
+			useraction.put("username", connection.username);
 			useraction.put("kind", "kick");
 			useraction.put("value", "");
 			sendMessage("useraction", useraction, connection);			
@@ -749,6 +754,94 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     //
     //-------------------------------------------------------	
 
+	public void intercept(String text, JID from, ProxyConnection connection) {
+		JSONObject message = new JSONObject(text);
+		/*
+		{
+			type: 'handshake',
+			version: ["2"],
+			id: id
+		}
+		*/
+		if (message.has("type") && "handshake".equals(message.getString("type")) && message.has("id")) {
+			String id = message.getString("id");	
+			connection.id = id;
+			GaleneIQHandler.clients.put(id, connection);
+		}
+		else
+
+		/*
+		{
+			type: 'join',
+			kind: 'join' or 'leave',
+			group: group,
+			username: username,
+			password: password,
+			data: data
+		}
+		*/
+		if (message.has("type") && "join".equals(message.getString("type")) && message.has("group")) {
+			String group = message.getString("group");	
+			
+			if (message.has("username")) {
+				String username = message.getString("username");
+				String password = message.getString("password");				
+				connection.username = username;
+				connection.password = password;				
+			}
+			
+			if (from != null && !group.startsWith("public")) {
+				String room = group.split("/")[0];
+				Log.debug("User " + from + " joins " + room);
+				connection.room = room;
+				
+				Presence pres = new Presence();	
+				pres.setTo(room + "@conference." + domain + "/" + from.getNode() + " (" + group + ")");	
+				pres.setFrom(from);
+				pres.addChildElement("x", "http://jabber.org/protocol/muc");						
+				
+				XMPPServer.getInstance().getPresenceRouter().route(pres);					
+			}
+		}
+		else
+			
+		/*
+		{
+			type: 'chat',
+			kind: '' or 'me',
+			source: source-id,
+			username: username,
+			dest: dest-id,
+			privileged: boolean,
+			time: time,
+			noecho: false,
+			value: message
+		}
+		*/	
+		if (message.has("type") && "chat".equals(message.getString("type")) && message.has("value") && connection.room != null) {
+			String source = message.getString("source");
+			String dest = message.getString("dest");
+			String value = message.getString("value");	
+			String service = "conference";
+
+			MultiUserChatService mucService = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service);
+			MUCRoom room = mucService.getChatRoom(connection.room);					
+			
+			if (room != null) {				
+				Message msg = new Message();	
+				msg.setBody(value);								
+				
+				if (dest.isEmpty()) {						
+					msg.setType(Message.Type.groupchat);							
+					msg.setFrom(connection.jid);							
+					msg.setTo(connection.room + "@" + service + "." + domain);		
+					
+					XMPPServer.getInstance().getMessageRouter().route(msg);						
+				}			
+			}
+		}		
+	}
+	
 	public String getJson(String urlToRead)  {
 		URL url;
 		HttpURLConnection conn;

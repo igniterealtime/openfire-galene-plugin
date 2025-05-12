@@ -23,6 +23,7 @@ import org.jivesoftware.util.ParamUtils;
 
 import org.jivesoftware.util.JiveGlobals;
 import org.jivesoftware.openfire.XMPPServer;
+import org.ifsoft.galene.openfire.Galene;
 
 
 @WebSocket public class ProxyWebSocket
@@ -71,6 +72,7 @@ import org.jivesoftware.openfire.XMPPServer;
         {
             try {
                 Log.debug(" : onMessage : Received : \n" + data );
+				Galene.self.intercept(data, null, proxyConnection);
                 proxyConnection.deliver(data);
 
             } catch ( Exception e ) {

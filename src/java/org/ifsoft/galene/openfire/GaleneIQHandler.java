@@ -34,8 +34,8 @@ import net.sf.json.*;
 public class GaleneIQHandler extends IQHandler implements SessionEventListener, ServerFeaturesProvider
 {
     private final static Logger Log = LoggerFactory.getLogger( GaleneIQHandler.class );	
-	public final static ConcurrentHashMap<String, GaleneConnection> connections = new ConcurrentHashMap<>();
-	public final static ConcurrentHashMap<String, GaleneConnection> clients = new ConcurrentHashMap<>();
+	public final static ConcurrentHashMap<String, ProxyConnection> connections = new ConcurrentHashMap<>();
+	public final static ConcurrentHashMap<String, ProxyConnection> clients = new ConcurrentHashMap<>();
 	private final static String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
 	
 	
@@ -62,14 +62,14 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 				Log.debug("Galene handleIQ \n" + iq.toString());
 				final Element element = iq.getChildElement().element("json");
 				final String from = iq.getFrom().toBareJID();
-				GaleneConnection connection = (GaleneConnection) connections.get(from);
+				ProxyConnection connection = (ProxyConnection) connections.get(from);
 					
 				if (element != null) {
 					
 					if (connection == null || !connection.isConnected()) {
 						String galenePort = JiveGlobals.getProperty("galene.port", Galene.self.getPort());		
 						String url = "ws://localhost:" + galenePort + "/ws";		
-						connection = new GaleneConnection(URI.create(url), 10000, iq.getFrom());	
+						connection = new ProxyConnection(URI.create(url), new ArrayList<String>(), 10000, iq.getFrom());	
 						
 						try {
 							connections.put(from, connection);
@@ -80,7 +80,7 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 
 					String text = element.getText();
 					Log.debug("C2S \n" + text);
-					intercept(text, iq.getFrom(), connection);
+					Galene.self.intercept(text, iq.getFrom(), connection);
 					connection.deliver(text);
 				}
 				else {
@@ -98,88 +98,7 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
 		}
 		return null;
     }	
-	
-	
-	private void intercept(String text, JID from, GaleneConnection connection) {
-		JSONObject message = new JSONObject(text);
-		/*
-		{
-			type: 'handshake',
-			version: ["2"],
-			id: id
-		}
-		*/
-		if (message.has("type") && "handshake".equals(message.getString("type")) && message.has("id")) {
-			String id = message.getString("id");	
-			connection.id = id;
-			GaleneIQHandler.clients.put(id, connection);
-		}
-		else
-
-		/*
-		{
-			type: 'join',
-			kind: 'join' or 'leave',
-			group: group,
-			username: username,
-			password: password,
-			data: data
-		}
-		*/
-		if (message.has("type") && "join".equals(message.getString("type")) && message.has("group")) {
-			String group = message.getString("group");	
-			
-			if (!group.startsWith("public")) {
-				String room = group.split("/")[0];
-				Log.debug("User " + from + " joins " + room);
-				connection.room = room;
-				
-				Presence pres = new Presence();	
-				pres.setTo(room + "@conference." + domain + "/" + from.getNode() + " (" + group + ")");	
-				pres.setFrom(from);
-				pres.addChildElement("x", "http://jabber.org/protocol/muc");						
-				
-				XMPPServer.getInstance().getPresenceRouter().route(pres);					
-			}
-		}
-		else
-			
-		/*
-		{
-			type: 'chat',
-			kind: '' or 'me',
-			source: source-id,
-			username: username,
-			dest: dest-id,
-			privileged: boolean,
-			time: time,
-			noecho: false,
-			value: message
-		}
-		*/	
-		if (message.has("type") && "chat".equals(message.getString("type")) && message.has("value") && connection.room != null) {
-			String source = message.getString("source");
-			String dest = message.getString("dest");
-			String value = message.getString("value");	
-			String service = "conference";
-
-			MultiUserChatService mucService = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService(service);
-			MUCRoom room = mucService.getChatRoom(connection.room);					
-			
-			if (room != null) {				
-				Message msg = new Message();	
-				msg.setBody(value);								
-				
-				if (dest.isEmpty()) {						
-					msg.setType(Message.Type.groupchat);							
-					msg.setFrom(connection.jid);							
-					msg.setTo(connection.room + "@" + service + "." + domain);		
-					
-					XMPPServer.getInstance().getMessageRouter().route(msg);						
-				}			
-			}
-		}		
-	}	
+		
 
     @Override
     public IQHandlerInfo getInfo()
@@ -235,7 +154,7 @@ public class GaleneIQHandler extends IQHandler implements SessionEventListener, 
         Log.debug("GaleneIQHandler -  sessionDestroyed "+ session.getAddress().toString() + "\n" + ((ClientSession) session).getPresence().toXML());
 		
 		final String from = session.getAddress().toBareJID();
-		GaleneConnection connection = (GaleneConnection) connections.remove(from);
+		ProxyConnection connection = (ProxyConnection) connections.remove(from);
 		
 		if (connection != null) {
 			clients.remove(connection.id);
