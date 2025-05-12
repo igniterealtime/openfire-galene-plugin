@@ -7,5 +7,6 @@
   "op": [{}],
   "presenter": [{}],
   "other": [{}],  
+  "codecs": ["vp9", "opus", "av1", "h264"],   
   "max-clients": 100
 }

@@ -599,6 +599,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			
 			JSONArray authKeys = new JSONArray();	
 			JSONObject authKey = new JSONObject();
+			
 			authKey.put("kty", "oct");
 			authKey.put("alg", "HS256");
 			authKey.put("k", JWebToken.SECRET_KEY);
@@ -618,7 +619,13 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			json.put("unrestricted-tokens", room.canOccupantsInvite());
 			json.put("max-clients", room.getMaxUsers());
 			
-
+			JSONArray codecs = new JSONArray();
+			codecs.put(0, "vp9");
+			codecs.put(1, "av1");		
+			codecs.put(2, "opus");			
+			codecs.put(3, "h264");	
+			json.put("codecs", codecs);			
+			
 			List<String> lines = new ArrayList<String>();
 			lines.add(json.toString());
 
