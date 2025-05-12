@@ -4416,7 +4416,7 @@ async function serverConnect() {
     if(!url) {
         console.warn("no endpoint in status");
         url = `ws${location.protocol === 'https:' ? 's' : ''}://${location.host}/ws`;
-    }*/
+    }*/	
 
 	let url = `ws${location.protocol === 'https:' ? 's' : ''}://${location.host}/galene-ws/`;
  
@@ -4474,6 +4474,20 @@ async function start() {
         document.getElementById('username').focus()
     }
     setViewportHeight();
+}
+
+// BAO
+
+window.onload = async function() {	
+	console.debug("window.onload");
+	
+	document.getElementById('closebutton').onclick = async function(e) {
+		console.debug("closebutton click");
+		
+		setTimeout(() => {	
+			location.href = "about:blank";		
+		}, 1000);				
+	};
 }
 
 start();
