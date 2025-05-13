@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome file</title>
+  <title>Galene Plugin Read Me</title>
   <link rel="stylesheet" href="https://stackedit.io/style.css" />
 </head>
 
@@ -16,6 +16,7 @@
 <li>
 <ul>
 <li><a href="#galene">Galene</a></li>
+<li><a href="#ci-build-status">CI Build Status</a></li>
 <li><a href="#overview">Overview</a></li>
 <li><a href="#known-issues">Known Issues</a></li>
 <li><a href="#installation">Installation</a></li>
@@ -32,6 +33,8 @@
     <div class="stackedit__html">
       <h2 id="galene">Galene</h2>
 <p>Selective Forwarding Unit (SFU) for Openfire using Galene.</p>
+<h2 id="ci-build-status">CI Build Status</h2>
+<p><a href="https://github.com/igniterealtime/openfire-galene-plugin/actions"><img src="https://github.com/igniterealtime/openfire-galene-plugin/workflows/Java%20CI/badge.svg" alt="Build Status"></a></p>
 <h2 id="overview">Overview</h2>
 <img src="https://igniterealtime.github.io/openfire-galene-plugin/galene-summary.png">
 <h2 id="known-issues">Known Issues</h2>
@@ -39,22 +42,28 @@
 <h2 id="installation">Installation</h2>
 <p>copy galene.jar to the plugins folder</p>
 <h2 id="configuration">Configuration</h2>
-<img src="https://user-images.githubusercontent.com/110731/259781570-5a9a2918-ca51-4bed-80f0-b50db7aa63cb.png">
+<img src="https://github.com/user-attachments/assets/d7246327-3c6d-4cc1-9f84-0a652e0c91c6">
 <h3 id="enable-sfu">Enable SFU</h3>
 <p>Enables or disables the plugin. Reload plugin or restart Openfire if this or any of the settings other settings are changed.</p>
 <h3 id="enable-muc-groupchat-support">Enable MUC (Groupchat) Support</h3>
 <p>If this option is not enabled, Galene will only use a single parent group called <em>public</em>. Subgroups will be enabled and all participants will have <em>operator</em> privileges. They can publish media streams and manage the meeting. See Galene documentation for full details. Both anonymous and  authenticated XMPP sessions can join a public group and all subgroups.</p>
-<p>To join a public subgroup called my-meeting, with the galene web client, use <a href="http://your-openfire-server:7070/galene/?room=public/my-meeting&amp;username=your-user-name">http://your-openfire-server:7070/galene/?room=public/my-meeting&amp;username=your-user-name</a>.</p>
-<p>If this option is enabled, then Galene SFU becomes integrated with Openfire. Openfire MUC group-chat rooms can be used as Galene groups in addition to the default public group. Authentication is enabled and only authenticated XMPP sessions can join a Galene group subject to the room configuration. For example, member only MUC rooms will disable allow-anonymous in Galene and only room member xmpp sessions will be allowed to join the Galene group.</p>
-<p>In this mode, users will require an authenticated XMPP session to join an Openfire MUC groupchat room. See Pade client or the Galene plugin for ConverseJS for more details.</p>
+<p>To join a public subgroup called my-meeting, with the galene web client, use <a href="https://your-openfire-server:7443/group/public/my-meeting">https://your-openfire-server:7443/group/public/my-meeting</a>. Enter any meeting alias name as username and ignore password.</p>
+<p>If this option is enabled, then Galene SFU becomes integrated with Openfire. Openfire MUC group-chat rooms can be used as Galene groups in addition to the default public group. Authentication is enabled and only authenticated XMPP users can join a Galene group subject to the room configuration. For example, member only MUC rooms will disable allow-anonymous in Galene and only room members will be allowed to join the Galene group. Users will require XMPP credentials (username/password) to join a meeting with the same names as a an Openfire MUC groupchat room. See Pade client or the Galene plugin for ConverseJS for more details.</p>
+<p>To join an Openfire MUC group-chat room called my-room-meeting, with the galene web client, use <a href="https://your-openfire-server:7443/group/my-room-meeting">https://your-openfire-server:7443/group/my-room-meeting</a>. Enter the XMPP username and password to authenticate.</p>
 <p>Once a user has joined with at least presenter permissions, they can invite an external user with an invitation token.</p>
-<p>To join an MUC groupchat room called lobby with the Galene web client as user <em>fred</em> using invitation token xxxxxxxxxxx, use <a href="http://localhost:7070/galene?token=xxxxxxxxxxx&amp;room=public&amp;username=fred">http://localhost:7070/galene?token=xxxxxxxxxxx&amp;room=public&amp;username=fred</a></p>
+<p>To join an MUC groupchat room called lobby with the Galene web client as user <em>fred</em> using invitation token xxxxxxxxxxx, use <a href="https://your-openfire-server:7443/group/lobby?token=xxxxxxxxxxx">https://your-openfire-server:7443/group/lobby?token=xxxxxxxxxxx</a></p>
+<h3 id="use-single-muxed-udp-port-instead-of-a-range">Use single muxed UDP port instead of a range</h3>
+<p>Allocate a range of ports or the single muxed port.</p>
+<h3 id="enable-turn-server">Enable TURN server</h3>
+<p>Enable the internal TURN server. Not needed when deployed on a LAN with no firewall between users and the server.</p>
 <h3 id="usernamepassword">Username/Password</h3>
 <p>This is Openfire username/password for the user that will have Galene admin permissions to view stream stats and join any meeting. By default the user will be “sfu-user” and the password witll be a random string. If you are using ldap or your Openfire user manager is in read-only mode and a new user cannot be created, then you must create the user and specify the username and password here…</p>
 <h3 id="ip-addresstcp-port">IP Address/TCP Port</h3>
 <p>This is the internal IP address of the network card to which you want Galene to bind to. Galene is not exposed outside of the internal network and can only be accessed via Openfire using an XMPP client connection. By default port 6060 will be used. However any other internal port can be used. Use <a href="http://ip-address">http://ip-address</a>:port on the internal network to confirm galene is up and running.</p>
 <h3 id="udp-port-minmax">UDP Port Min/Max</h3>
 <p>This limits the pool of ephemeral ports that ICE UDP connections can allocate from. This affects both host candidates, and the local address of server reflexive candidates.</p>
+<h3 id="udp-port-mux">UDP Port Mux</h3>
+<p>This is the single UDP port that ICE UDP connections will be allocated.</p>
 <h3 id="turn-ip-addressport">TURN IP Address/Port</h3>
 <p>This is the public IP address of the FQDN of your openfire server that will be exposed to client web browsers when they ask for ICE canndidates during media negotiation. Make sure the port specified is opened for TCP and UDP. galene will bind its interrnal TURN server to this port. If Galene is behind NAT and your NAT device doesn’t support hairpinning, then you must use an external TURN server.</p>
 <h3 id="external-url">External URL</h3>
