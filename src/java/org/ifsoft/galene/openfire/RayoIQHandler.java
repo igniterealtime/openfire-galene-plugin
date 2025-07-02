@@ -799,7 +799,7 @@ public class RayoIQHandler {
 				if (room != null) {
 					groupChat = true;
 					
-					for (MUCRole role : room.getParticipants()) {
+					for (MUCOccupant role : room.getParticipants()) {
 						Log.debug("RayoComponent sendRayoEvent - " + role.getUserAddress());
 						event.setTo(role.getUserAddress());
 						XMPPServer.getInstance().getPresenceRouter().route(event);						

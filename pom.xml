@@ -7,12 +7,12 @@
     <parent>
         <artifactId>plugins</artifactId>
         <groupId>org.igniterealtime.openfire</groupId>
-        <version>4.9.2</version>
+        <version>5.0.0</version>
     </parent>
     
     <groupId>org.igniterealtime.openfire</groupId>
     <artifactId>galene</artifactId>
-    <version>0.9.2-SNAPSHOT</version>
+    <version>0.9.2</version>
     
     <properties>      
     </properties>    
@@ -65,10 +65,10 @@
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
             </plugin>
-            <plugin>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-jspc-maven-plugin</artifactId>
-            </plugin>			           
+			<plugin>
+				<groupId>org.eclipse.jetty.ee8</groupId>
+				<artifactId>jetty-ee8-jspc-maven-plugin</artifactId>
+			</plugin> 			           
         </plugins>
     </build>
 
@@ -81,8 +81,8 @@
         </dependency>
         
         <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-proxy</artifactId>
+            <groupId>org.eclipse.jetty.ee8</groupId>
+            <artifactId>jetty-ee8-proxy</artifactId>
 			<version>${jetty.version}</version>
         </dependency>
 		
@@ -117,8 +117,8 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.eclipse.jetty.websocket</groupId>
-			<artifactId>websocket-jetty-client</artifactId>
+			<groupId>org.eclipse.jetty.ee8.websocket</groupId>
+			<artifactId>jetty-ee8-websocket-jetty-client</artifactId>
 			<version>${jetty.version}</version>
 		</dependency>
 		

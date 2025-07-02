@@ -29,17 +29,14 @@ import org.jivesoftware.util.PropertyEventDispatcher;
 import org.jivesoftware.util.PropertyEventListener;
 import org.jivesoftware.util.StringUtils;
 
-import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
-import org.eclipse.jetty.plus.annotation.ContainerInitializer;
-import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.servlets.*;
-import org.eclipse.jetty.servlet.*;
-import org.eclipse.jetty.websocket.server.config.JettyWebSocketServletContainerInitializer;
-import org.eclipse.jetty.websocket.servlet.*;
-import org.eclipse.jetty.websocket.server.*;
-import org.eclipse.jetty.websocket.server.config.*;
-import org.eclipse.jetty.webapp.WebAppContext;
-import org.eclipse.jetty.proxy.ProxyServlet;
+import org.eclipse.jetty.ee8.webapp.WebAppContext;
+import org.eclipse.jetty.ee8.servlet.*;
+import org.eclipse.jetty.ee8.websocket.server.config.JettyWebSocketServletContainerInitializer;
+import org.eclipse.jetty.ee8.websocket.servlet.*;
+import org.eclipse.jetty.ee8.websocket.server.*;
+import org.eclipse.jetty.ee8.websocket.server.config.*;
+
+import org.eclipse.jetty.ee8.proxy.ProxyServlet;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -204,11 +201,6 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         jspService = new WebAppContext(null, pluginDirectory.getPath() + "/classes/jsp",  "/galene");
         jspService.setClassLoader(this.getClass().getClassLoader());
         jspService.getMimeTypes().addMimeMapping("wasm", "application/wasm");
-
-        final List<ContainerInitializer> initializers = new ArrayList<>();
-        initializers.add(new ContainerInitializer(new JettyJasperInitializer(), null));
-        jspService.setAttribute("org.eclipse.jetty.containerInitializers", initializers);
-        jspService.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
 
         Log.debug("Galene jsp service enabled");
         HttpBindManager.getInstance().addJettyHandler(jspService);
@@ -501,6 +493,18 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     {
 
     }
+	
+    public void roomClearChatHistory(long roomID, JID roomJID) {
+
+    }
+
+    public void roomCreated(long roomID, JID roomJID) {
+
+    }
+	
+    public void roomDestroyed(long roomID, JID roomJID) {
+
+    }	
 	
 	public Map<String, String> getGroupChatProperties(JID roomJID) {
 		Map<String, String> properties = null;

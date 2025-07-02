@@ -7,9 +7,8 @@
     <version>${project.version}</version>
     <licenseType>Apache 2.0</licenseType>
     <date>2025-07-02</date>
-    <minServerVersion>4.8.0</minServerVersion>
-    <priorToServerVersion>4.9.2</priorToServerVersion>		
-
+    <minServerVersion>5.0.0</minServerVersion>
+ 
    <adminconsole>
         <tab id="sidebar-media-services">                                                                            
             <item id="galene-summary" name="${config.page.summary}" description="${config.page.summary.description}" url="galene-summary.jsp"/>
