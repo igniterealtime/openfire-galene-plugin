@@ -370,7 +370,12 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		users.put(JiveGlobals.getProperty("galene.username", "sfu-admin"), admin);
 		json.put("users", users);
 		json.put("writableGroups", true);
-		json.put("publicServer", true);
+		
+		String hostname = XMPPServer.getInstance().getServerInfo().getHostname();
+		JSONArray origins = new JSONArray();
+		origins.put(0, hostname);
+		json.put("allowOrigin", origins);
+		json.put("allowAdminOrigin", origins);
 		
 		//json.put("proxyURL",  JiveGlobals.getProperty("galene.url", "http://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + getPort()));		
 		
@@ -556,12 +561,12 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 				Log.debug("writeGaleneGroupFile owner " + jid + " " + room.getJID());
 				String pass = properties.get("galene.owner.password");
 				
-				if (pass != null) {
-					JSONObject owner = new JSONObject();				
+				if (pass != null) {		
+					JSONObject owner = new JSONObject();								
 					owner.put("username", jid.getNode());
 					owner.put("password", pass);
-					op.put(op_kt++, owner);
-				}
+					op.put(op_kt++, owner);						
+				}			
 			}
 
 			json.put("op", op);
@@ -569,14 +574,14 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			for (JID jid : room.getAdmins())
 			{
 				Log.debug("writeGaleneGroupFile admin " + jid + " " + room.getJID());
-				String pass = properties.get("galene.admin.password");
+				String pass = properties.get("galene.admin.password");			
 				
-				if (pass != null) {			
-					JSONObject admin = new JSONObject();
+				if (pass != null) {		
+					JSONObject admin = new JSONObject();					
 					admin.put("username", jid.getNode());
 					admin.put("password", pass);
-					presenter.put(presenter_kt++, admin);
-				}
+					presenter.put(presenter_kt++, admin);					
+				}				
 			}
 
 			//if (presenter_kt == 0 && !room.isMembersOnly()) presenter.put(0, new JSONObject()); // anybody is presenter
@@ -791,10 +796,13 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			String group = message.getString("group");	
 			
 			if (message.has("username")) {
-				String username = message.getString("username");
-				String password = message.getString("password");				
+				String username = message.getString("username");				
 				connection.username = username;
-				connection.password = password;				
+				
+				if (message.has("password")) {
+					String password = message.getString("password");				
+					connection.password = password;				
+				}
 			}
 			
 			if (from != null && !group.startsWith("public")) {
