@@ -71,6 +71,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     private ServletContextHandler galeneWsContext;	
     private GaleneIQHandler galeneIQHandler;
     private RayoIQHandler rayoIQHandler;
+    private OlMeetIQHandler olMeetIQHandler;	
 	private ProxyConnection adminConnection;
     private Cache muc_properties;		
 	
@@ -92,13 +93,16 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 				HttpBindManager.getInstance().removeJettyHandler(galeneWsContext);
 				galeneWsContext.destroy();
 			}			
-		
+
+			galeneIQHandler.stopHandler();		
             XMPPServer.getInstance().getIQRouter().removeHandler(galeneIQHandler);
-			galeneIQHandler.stopHandler();
             galeneIQHandler = null;		
 
 			rayoIQHandler.stopHandler();
-            rayoIQHandler = null;				
+            rayoIQHandler = null;	
+
+            XMPPServer.getInstance().getIQRouter().removeHandler(olMeetIQHandler);
+            olMeetIQHandler = null;					
 
             Log.info("gaelene terminated");
         }
@@ -126,7 +130,12 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		XMPPServer.getInstance().getIQDiscoInfoHandler().addServerFeature("urn:xmpp:sfu:galene:0");			
 		
 		rayoIQHandler = new RayoIQHandler();
-		rayoIQHandler.startHandler();				
+		rayoIQHandler.startHandler();
+
+		olMeetIQHandler = new OlMeetIQHandler();
+		XMPPServer.getInstance().getIQRouter().addHandler(olMeetIQHandler);
+		XMPPServer.getInstance().getIQDiscoInfoHandler().addServerFeature("urn:xmpp:http:online-meetings:initiate:0");				
+		XMPPServer.getInstance().getIQDiscoInfoHandler().addServerFeature("urn:xmpp:http:online-meetings#galene");		
 		
         Log.info("gaelene initiated");
     }
@@ -171,6 +180,36 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
         return ourIpAddress;
     }
+	
+    public URL getWebappURL()
+    {
+        final String override = JiveGlobals.getProperty( "galene.webapp.url.override" );
+        if ( override != null && !override.trim().isEmpty() )
+        {
+            try
+            {
+                return new URL( override );
+            }
+            catch ( MalformedURLException e )
+            {
+                Log.warn( "An override for the webapp address is defined in 'galene.webapp.url.override', but its value is not a valid URL.", e );
+            }
+        }
+        try
+        {
+            final String protocol = "https"; // No point in providing the non-SSL protocol, as webRTC won't work there.
+            final String host = XMPPServer.getInstance().getServerInfo().getHostname();
+            final int port = Integer.parseInt(JiveGlobals.getProperty("httpbind.port.secure", "7443"));
+            final String path = "/group/public";
+
+            return new URL( protocol, host, port, path );
+        }
+        catch ( MalformedURLException e )
+        {
+            Log.error( "Unable to compose the webapp URL", e );
+            return null;
+        }
+    }	
 
     public void onOutputLine(final String line)
     {
