@@ -111,8 +111,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         }
     }
 
-    public void initializePlugin(final PluginManager manager, final File pluginDirectory)
-    {	
+    public void initializePlugin(final PluginManager manager, final File pluginDirectory) {	
 		muc_properties = CacheFactory.createLocalCache("MUC Room Properties");	
 		
         PropertyEventDispatcher.addListener(this);
@@ -181,8 +180,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         return ourIpAddress;
     }
 	
-    public URL getWebappURL()
-    {
+    public URL getWebappURL() {
         final String override = JiveGlobals.getProperty( "galene.webapp.url.override" );
         if ( override != null && !override.trim().isEmpty() )
         {
@@ -211,13 +209,11 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
         }
     }	
 
-    public void onOutputLine(final String line)
-    {
+    public void onOutputLine(final String line) {
         Log.debug("onOutputLine " + line);
     }
 
-    public void onProcessQuit(int code)
-    {
+    public void onProcessQuit(int code) {
         Log.debug("onProcessQuit " + code);
     }
 
@@ -353,13 +349,24 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
                 galeneExePath = galeneHomePath + File.separator + "galene";
                 makeFileExecutable(galeneExePath);
             }
-            else if(OSUtils.IS_WINDOWS64)
-            {
+            else 
+				
+			if(OSUtils.IS_MAC64) {
+                galeneHomePath = galeneHomePath + File.separator + "macos-64";
+                galeneExePath = galeneHomePath + File.separator + "galene";
+                makeFileExecutable(galeneExePath);				
+
+            }
+            else 
+				
+			if(OSUtils.IS_WINDOWS64) {
                 galeneHomePath = galeneHomePath + File.separator + "win-64";
                 galeneExePath = galeneHomePath + File.separator + "galene.exe";
                 makeFileExecutable(galeneExePath);				
 
-            } else {
+            } 
+			
+			else {
                 Log.error("checkNatives unknown OS " + pluginDirectory.getAbsolutePath());
                 return;
             }

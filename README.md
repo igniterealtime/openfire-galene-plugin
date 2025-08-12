@@ -10,7 +10,7 @@ Selective Forwarding Unit (SFU) for Openfire using Galene.
 
 ## Known Issues
 
-This version has embedded binaries for only Linux 64 and Windows 64.
+This version has embedded binaries for only Linux 64, MacOS 64 (ARM) and Windows 64.
 
 ## Installation
 

@@ -32,7 +32,6 @@
                     <goals>
                     <goal>copy-resources</goal>
                     </goals>
-
                     <configuration>
                     <overwrite>true</overwrite>                 
                     <outputDirectory>classes/win-64</outputDirectory>
@@ -49,7 +48,6 @@
                     <goals>
                     <goal>copy-resources</goal>
                     </goals>
-
                     <configuration>
                     <overwrite>true</overwrite>                 
                     <outputDirectory>classes/linux-64</outputDirectory>
@@ -59,7 +57,23 @@
                         </resource>
                     </resources>
                     </configuration>
-                </execution>                
+                </execution> 
+                <execution>
+                    <id>copy-macos-64</id>
+                    <phase>prepare-package</phase>
+                    <goals>
+                    <goal>copy-resources</goal>
+                    </goals>
+                    <configuration>
+                    <overwrite>true</overwrite>                 
+                    <outputDirectory>classes/macos-64</outputDirectory>
+                    <resources>
+                        <resource>
+                        <directory>src/root</directory>
+                        </resource>
+                    </resources>
+                    </configuration>
+                </execution> 				
                </executions>
             </plugin>            
             <plugin>
