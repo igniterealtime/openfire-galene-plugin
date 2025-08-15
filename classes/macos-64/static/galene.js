@@ -1030,6 +1030,8 @@ async function setMediaChoices(done) {
  * @param {string} [localId]
  */
 function newUpStream(localId) {
+    if(!serverConnection)
+        throw new Error("Not connected");
     let c = serverConnection.newUpStream(localId);
     c.onstatus = function(status) {
         setMediaStatus(c);
@@ -1281,6 +1283,8 @@ async function setFilter(c) {
  * @param {any[]} [transfer]
  */
 async function workerSendReceive(worker, message, transfer) {
+    if(worker.onmessage)
+        throw new Error("worker busy");
     let p = new Promise((resolve, reject) => {
         worker.onmessage = e => {
             if(e && e.data) {
@@ -1293,8 +1297,12 @@ async function workerSendReceive(worker, message, transfer) {
             }
         };
     });
-    worker.postMessage(message, transfer);
-    return await p
+    try {
+        worker.postMessage(message, transfer);
+        return await p
+    } finally {
+        worker.onmessage = null;
+    }
 }
 
 /**
@@ -3796,7 +3804,14 @@ commands.replace = {
     }
 };
 
-commands.stopshare = {
+commands.sharescreen = {
+    description: 'start a screen share',
+    f: (c, r) => {
+        addShareMedia();
+    }
+}
+
+commands.unsharescreen = {
     description: 'stop screen share',
     f: (c, r) => {
         closeUpMedia('screenshare');

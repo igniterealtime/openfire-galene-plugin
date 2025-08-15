@@ -23,17 +23,17 @@ copy galene.jar to the plugins folder
 Enables or disables the plugin. Reload plugin or restart Openfire if this or any of the settings other settings are changed.
 
 ### Enable MUC (Groupchat) Support
-If this option is not enabled, Galene will only use a single parent group called *public*. Subgroups will be enabled and all participants will have *operator* privileges. They can publish media streams and manage the meeting. See Galene documentation for full details. Both anonymous and  authenticated XMPP sessions can join a public group and all subgroups. 
+If this option is not enabled, Galene will only use a single parent group called *public*. Subgroups will be enabled and all participants will have *operator* privileges. They can publish media streams and manage the meeting. See Galene documentation for full details. Both anonymous and  authenticated XMPP users can join a public group and all subgroups. 
 
 To join a public subgroup called my-meeting, with the galene web client, use https://your-openfire-server:7443/group/public/my-meeting. Enter any meeting alias name as username and ignore password.
 
-If this option is enabled, then Galene SFU becomes integrated with Openfire. Openfire MUC group-chat rooms can be used as Galene groups in addition to the default public group. Authentication is enabled and only authenticated XMPP users can join a Galene group subject to the room configuration. For example, member only MUC rooms will disable allow-anonymous in Galene and only room members will be allowed to join the Galene group. Users will require XMPP credentials (username/password) to join a meeting with the same names as a an Openfire MUC groupchat room. See Pade client or the Galene plugin for ConverseJS for more details.
+If this option is enabled, then Galene SFU becomes integrated with Openfire. Openfire MUC group-chat rooms can be used as Galene groups in addition to the default public group. Authentication is enabled and only authenticated XMPP users can join a Galene group subject to the room configuration. For example, member only MUC rooms will disable allow-anonymous in Galene and only room members will be allowed to join the Galene group. Users will require XMPP credentials (username/password) to join a meeting with the same names as a an Openfire MUC groupchat room.
 
 To join an Openfire MUC group-chat room called my-room-meeting, with the galene web client, use https://your-openfire-server:7443/group/my-room-meeting. Enter the XMPP username and password to authenticate.
 
-Once a user has joined with at least presenter permissions, they can invite an external user with an invitation token.
+Once a user has joined with at least presenter permissions, they can invite an external user with an invitation token. Use the web app UI to generate the meeting invitation URL.
 
-To join an MUC groupchat room called lobby with the Galene web client as user *fred* using invitation token xxxxxxxxxxx, use https://your-openfire-server:7443/group/lobby?token=xxxxxxxxxxx
+To join an MUC groupchat room called lobby with the Galene web client using invitation token xxxxxxxxxxx, use https://your-openfire-server:7443/group/lobby?token=xxxxxxxxxxx
 
 ### Use single muxed UDP port instead of a range
 Allocate a range of ports or the single muxed port.
@@ -61,7 +61,9 @@ This is the base public URL (minus path) that is used to access galene externall
 
 ## How to use
 
-This plugin implements [XEP-XXXX: In-Band SFU Sessions](https://igniterealtime.github.io/openfire-galene-plugin/xep/xep-xxx-sfu_01-01.xml) for the Galene SFU. 
+This plugin implements:
+- [XEP-XXXX: In-Band SFU Sessions](https://igniterealtime.github.io/openfire-galene-plugin/xep/xep-xxx-sfu_01-01.xml) for the Galene SFU. 
+- [XEP-0483: HTTP Online Meetings](https://xmpp.org/extensions/xep-0483.html). See [ConverseJS](https://github.com/conversejs/community-plugins/tree/master/packages/olmeet) and [Spark](https://github.com/igniterealtime/Spark/tree/master/plugins/meet) client plugins for more details
 
 ## Further information
 
