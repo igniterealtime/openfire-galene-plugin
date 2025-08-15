@@ -45,13 +45,13 @@ Enable the internal TURN server. Not needed when deployed on a LAN with no firew
 This is Openfire username/password for the user that will have Galene admin permissions to view stream stats and join any meeting. By default the user will be "sfu-user" and the password witll be a random string. If you are using ldap or your Openfire user manager is in read-only mode and a new user cannot be created, then you must create the user and specify the username and password here..
 
 ### IP Address/TCP Port
-This is the internal IP address of the network card to which you want Galene to bind to. Galene is not exposed outside of the internal network and can only be accessed via Openfire using an XMPP client connection. By default port 6060 will be used. However any other internal port can be used. Use http://ip-address:port on the internal network to confirm galene is up and running.
+This is the internal IP address of the network card to which you want Galene to bind to. Galene is not exposed outside of the internal network and can only be accessed via Openfire using the web-binding service on default port 7743. By default port 6060 will be used internally by Galene. However any other internal port can be used. Use http://ip-address:port on the internal network to confirm galene is up and running.
 
 ### UDP Port Min/Max
 This limits the pool of ephemeral ports that ICE UDP connections can allocate from. This affects both host candidates, and the local address of server reflexive candidates.
 
 ### UDP Port Mux
-This is the single UDP port that ICE UDP connections will be allocated.
+This is the single MUX UDP port that ICE UDP connections will be allocated.
 
 ### TURN IP Address/Port
 This is the public IP address of the FQDN of your openfire server that will be exposed to client web browsers when they ask for ICE canndidates during media negotiation. Make sure the port specified is opened for TCP and UDP. galene will bind its interrnal TURN server to this port. If Galene is behind NAT and your NAT device doesn't support hairpinning, then you must use an external TURN server. 
