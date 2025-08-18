@@ -419,8 +419,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		
 		lines.add(json.toString());
 
-        try
-        {
+        try {
 			File fil = new File(iniFileName);
 			fil.setReadable(true, true);
 			fil.setWritable(true, true);	
@@ -428,8 +427,7 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
             Path file = Paths.get(iniFileName);
             Files.write(file, lines, Charset.forName("UTF-8"));
         }
-        catch ( Exception e )
-        {
+        catch ( Exception e ) {
             Log.error( "Unable to write file " + iniFileName, e );
         }
 
@@ -440,7 +438,47 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			for (MUCRoom room : rooms) {					
 				writeGaleneGroupFile(room.getJID(), null);
 			}	
-		}			
+		}
+
+        String publicGroupFileName = galeneHomePath + "/groups/public.json";
+        lines = new ArrayList<String>();
+        Log.debug("Creating public group " + publicGroupFileName);
+		lines.add("{");
+		lines.add("  \"public\": true,");
+		lines.add("  \"description\": \"A public place to hangout\",");
+
+		JSONArray authKeys = new JSONArray();	
+		JSONObject authKey = new JSONObject();
+		
+		authKey.put("kty", "oct");
+		authKey.put("alg", "HS256");
+		authKey.put("k", JWebToken.SECRET_KEY);
+		authKey.put("kid", "0");		
+		authKeys.put(0, authKey);
+				
+		lines.add("  \"authKeys\": " + authKeys + ",");				
+		lines.add("  \"authServer\": \"https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/galene/auth-server\", ");								
+		
+  		lines.add("  \"allow-recording\": true,");
+  		lines.add("  \"allow-subgroups\": true,");
+  		lines.add("  \"op\": [{}],");
+  		lines.add("  \"presenter\": [{}],");
+  		lines.add("  \"other\": [{}],  ");
+  		lines.add("  \"codecs\": [\"vp9\", \"opus\", \"av1\", \"h264\"],   ");
+  		lines.add("  \"max-clients\": 100");
+		lines.add("}");
+
+        try  {
+			File fil = new File(publicGroupFileName);
+			fil.setReadable(true, true);
+			fil.setWritable(true, true);	
+			
+            Path file = Paths.get(publicGroupFileName);
+            Files.write(file, lines, Charset.forName("UTF-8"));
+        }
+        catch ( Exception e ) {
+            Log.error( "Unable to write file " + publicGroupFileName, e );
+        }		
     }
 
     private void createAdminUser()
@@ -598,58 +636,35 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		
 		if ("true".equals(properties.get("galene.enabled"))) {	
 			JSONArray op = new JSONArray();
-			int op_kt = 0;
-
 			JSONArray presenter = new JSONArray();
-			int presenter_kt = 0;
-
 			JSONArray other = new JSONArray();
-			int other_kt = 0;
 
-			for (JID jid : room.getOwners())
-			{
-				Log.debug("writeGaleneGroupFile owner " + jid + " " + room.getJID());
-				String pass = properties.get("galene.owner.password");
-				
-				if (pass != null) {		
-					JSONObject owner = new JSONObject();								
-					owner.put("username", jid.getNode());
-					owner.put("password", pass);
-					op.put(op_kt++, owner);						
-				}			
-			}
+			String pass = properties.get("galene.owner.password");
+			
+			if (pass != null) {		
+				JSONObject owner = new JSONObject();								
+				owner.put("password", pass);
+				op.put(0, owner);						
+			}			
 
 			json.put("op", op);
-
-			for (JID jid : room.getAdmins())
-			{
-				Log.debug("writeGaleneGroupFile admin " + jid + " " + room.getJID());
-				String pass = properties.get("galene.admin.password");			
-				
-				if (pass != null) {		
-					JSONObject admin = new JSONObject();					
-					admin.put("username", jid.getNode());
-					admin.put("password", pass);
-					presenter.put(presenter_kt++, admin);					
-				}				
-			}
-
-			//if (presenter_kt == 0 && !room.isMembersOnly()) presenter.put(0, new JSONObject()); // anybody is presenter
+			pass = properties.get("galene.admin.password");			
+			
+			if (pass != null) {		
+				JSONObject admin = new JSONObject();					
+				admin.put("password", pass);
+				presenter.put(0, admin);					
+			}				
 			json.put("presenter", presenter);
 
-			for (JID jid : room.getMembers())
-			{
-				Log.debug("writeGaleneGroupFile member " + jid + " " + room.getJID());
-				JSONObject member = new JSONObject();
-				member.put("username", jid.getNode());
-
-				if (password != null && !password.isEmpty()) {
-					member.put("password", password);  ;
-				}
-				other.put(other_kt++, member);
-			}
-
-			if (other_kt == 0 && !room.isMembersOnly()) other.put(0, new JSONObject());  // anybody is member
+			if (password != null && !password.isEmpty()) {
+				JSONObject member = new JSONObject();				
+				member.put("password", password);
+				other.put(0, member);					
+			} 
+			else  {
+				other.put(0, new JSONObject());  // anybody is member
+			}			
 			json.put("other", other);
 			
 			JSONArray authKeys = new JSONArray();	
@@ -669,7 +684,6 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			json.put("contact", room.getName());
 			json.put("comment", room.getSubject());
 			json.put("allow-recording", room.isLogEnabled());
-			json.put("allow-anonymous", !room.isMembersOnly() && (password == null || password.isEmpty()));
 			json.put("allow-subgroups", room.canOccupantsInvite());
 			json.put("unrestricted-tokens", room.canOccupantsInvite());
 			json.put("max-clients", room.getMaxUsers());
@@ -736,8 +750,9 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 	
 	private void startAdminConnection() {
 		String username = JiveGlobals.getProperty("galene.username", "sfu-admin");	
-		String galenePort = JiveGlobals.getProperty("galene.port", Galene.self.getPort());		
-		String url = "ws://localhost:" + galenePort + "/ws";	
+		String galenePort = JiveGlobals.getProperty("galene.port", Galene.self.getPort());	
+		String ipaddr = JiveGlobals.getProperty("galene.ipaddr", getIpAddress());
+		String url = "ws://" + ipaddr + ":" + galenePort + "/ws";	
 		
 		adminConnection = new ProxyConnection(URI.create(url), new ArrayList<String>(), 10000, new JID(username + "@" + domain));
 		
@@ -918,7 +933,9 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		String password = JiveGlobals.getProperty("galene.password", "sfu-admin");		
 		String auth = username + ":" + password;
 		String authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));	;
-		String uri = "http://localhost:" + getPort() + urlToRead;
+		String galenePort = JiveGlobals.getProperty("galene.port", getPort());	
+		String ipaddr = JiveGlobals.getProperty("galene.ipaddr", getIpAddress());
+		String uri = "http://" + ipaddr + ":" + galenePort + urlToRead;			
 
 		try {
 			url = new URL(uri);
