@@ -70,7 +70,6 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
     private ServletContextHandler galeneContext;
     private ServletContextHandler galeneWsContext;	
     private GaleneIQHandler galeneIQHandler;
-    private RayoIQHandler rayoIQHandler;
     private OlMeetIQHandler olMeetIQHandler;	
 	private ProxyConnection adminConnection;
     private Cache muc_properties;		
@@ -97,9 +96,6 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 			galeneIQHandler.stopHandler();		
             XMPPServer.getInstance().getIQRouter().removeHandler(galeneIQHandler);
             galeneIQHandler = null;		
-
-			rayoIQHandler.stopHandler();
-            rayoIQHandler = null;	
 
             XMPPServer.getInstance().getIQRouter().removeHandler(olMeetIQHandler);
             olMeetIQHandler = null;					
@@ -128,9 +124,6 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 		XMPPServer.getInstance().getIQRouter().addHandler(galeneIQHandler);	
 		XMPPServer.getInstance().getIQDiscoInfoHandler().addServerFeature("urn:xmpp:sfu:galene:0");			
 		
-		rayoIQHandler = new RayoIQHandler();
-		rayoIQHandler.startHandler();
-
 		olMeetIQHandler = new OlMeetIQHandler();
 		XMPPServer.getInstance().getIQRouter().addHandler(olMeetIQHandler);
 		XMPPServer.getInstance().getIQDiscoInfoHandler().addServerFeature("urn:xmpp:http:online-meetings:initiate:0");				
