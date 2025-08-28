@@ -9,7 +9,7 @@
 > * [src/web/galene-settings.jsp](https://github.com/igniterealtime/openfire-galene-plugin/blob/5aa54ac8/src/web/galene-settings.jsp)
 > * [src/web/galene-summary.jsp](https://github.com/igniterealtime/openfire-galene-plugin/blob/5aa54ac8/src/web/galene-summary.jsp)
 
-This page covers how administrators and users interact with the Galene plugin through its various interfaces, including monitoring active streams, configuring settings, and managing video conferences. For technical details about the underlying plugin architecture, see [System Architecture](/igniterealtime/openfire-galene-plugin/4-system-architecture). For specific client integration patterns, see [XMPP Client Integration](/igniterealtime/openfire-galene-plugin/3.3-xmpp-client-integration).
+This page covers how administrators and users interact with the Galene plugin through its various interfaces, including monitoring active streams, configuring settings, and managing video conferences. For technical details about the underlying plugin architecture, see [System Architecture](./4-system-architecture.md). For specific client integration patterns, see [XMPP Client Integration](./3.3-xmpp-client-integration.md).
 
 ## Administrative Interface Architecture
 

@@ -4,7 +4,7 @@
 > * [plugin.xml](https://github.com/igniterealtime/openfire-galene-plugin/blob/5aa54ac8/plugin.xml)
 > * [src/java/org/ifsoft/galene/openfire/Galene.java](https://github.com/igniterealtime/openfire-galene-plugin/blob/5aa54ac8/src/java/org/ifsoft/galene/openfire/Galene.java)
 
-This document provides a comprehensive overview of the internal architecture of the Openfire Galene Plugin, focusing on how the various components interact to provide SFU (Selective Forwarding Unit) video conferencing capabilities within the XMPP ecosystem. For installation and configuration details, see [Installation & Configuration](/igniterealtime/openfire-galene-plugin/2-installation-and-configuration). For protocol specifications, see [XMPP Protocol Extensions](/igniterealtime/openfire-galene-plugin/5-xmpp-protocol-extensions). For API details, see [API Reference](/igniterealtime/openfire-galene-plugin/8-api-reference).
+This document provides a comprehensive overview of the internal architecture of the Openfire Galene Plugin, focusing on how the various components interact to provide SFU (Selective Forwarding Unit) video conferencing capabilities within the XMPP ecosystem. For installation and configuration details, see [Installation & Configuration](./2-installation-and-configuration.md). For protocol specifications, see [XMPP Protocol Extensions](./5-xmpp-protocol-extensions.md). For API details, see [API Reference](./8-api-reference.md).
 
 ## System Overview
 

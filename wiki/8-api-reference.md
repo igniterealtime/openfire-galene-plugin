@@ -7,7 +7,7 @@
 
 This document provides a comprehensive technical reference for all programmatic interfaces exposed by the Openfire Galene Plugin. This includes HTTP REST endpoints, XMPP IQ handlers, WebSocket proxy mechanisms, and custom protocol extensions.
 
-For detailed HTTP endpoint specifications, see [HTTP APIs & Endpoints](/igniterealtime/openfire-galene-plugin/8.1-http-apis-and-endpoints). For XMPP message format details, see [XMPP IQ Handlers](/igniterealtime/openfire-galene-plugin/8.2-xmpp-iq-handlers). For configuration of these APIs, see [Plugin Configuration Options](/igniterealtime/openfire-galene-plugin/7.1-plugin-configuration-options).
+For detailed HTTP endpoint specifications, see [HTTP APIs & Endpoints](./8.1-http-apis-and-endpoints.md). For XMPP message format details, see [XMPP IQ Handlers](./8.2-xmpp-iq-handlers.md). For configuration of these APIs, see [Plugin Configuration Options](./7.1-plugin-configuration-options.md).
 
 ## API Overview
 

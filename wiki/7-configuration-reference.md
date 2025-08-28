@@ -14,7 +14,7 @@
 
 This document provides a comprehensive reference for all configuration options available in the Openfire Galene Plugin. It covers both plugin-specific settings stored in Openfire's configuration system and the embedded Galene SFU configuration files.
 
-For installation and basic setup instructions, see [Plugin Installation & Basic Setup](/igniterealtime/openfire-galene-plugin/2.2-plugin-installation-and-basic-setup). For advanced configuration scenarios and network setup, see [Advanced Configuration](/igniterealtime/openfire-galene-plugin/2.3-advanced-configuration). For understanding how these configurations integrate with the system architecture, see [Core Plugin Architecture](/igniterealtime/openfire-galene-plugin/4.1-core-plugin-architecture).
+For installation and basic setup instructions, see [Plugin Installation & Basic Setup](./2.2-plugin-installation-and-basic-setup.md). For advanced configuration scenarios and network setup, see [Advanced Configuration](./2.3-advanced-configuration.md). For understanding how these configurations integrate with the system architecture, see [Core Plugin Architecture](./4.1-core-plugin-architecture.md).
 
 ## Configuration Overview
 

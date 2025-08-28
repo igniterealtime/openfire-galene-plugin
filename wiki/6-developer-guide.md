@@ -6,7 +6,7 @@
 
 This document provides technical guidance for developers who want to understand, modify, or extend the Openfire Galene Plugin. It covers the plugin's architecture, key code components, development patterns, and implementation details.
 
-For general usage information, see [Administration & Usage](/igniterealtime/openfire-galene-plugin/3-administration-and-usage). For API documentation, see [API Reference](/igniterealtime/openfire-galene-plugin/8-api-reference). For configuration details, see [Configuration Reference](/igniterealtime/openfire-galene-plugin/7-configuration-reference).
+For general usage information, see [Administration & Usage](./3-administration-and-usage.md). For API documentation, see [API Reference](./8-api-reference.md). For configuration details, see [Configuration Reference](./7-configuration-reference.md).
 
 ## Overview
 
@@ -262,7 +262,7 @@ XMPPServer.getInstance().getIQRouter().addHandler(olMeetIQHandler);
 XMPPServer.getInstance().getIQDiscoInfoHandler().addServerFeature("urn:xmpp:http:online-meetings:initiate:0");
 ```
 
-For detailed information about the XMPP protocol extensions, see [XMPP Protocol Extensions](/igniterealtime/openfire-galene-plugin/5-xmpp-protocol-extensions).
+For detailed information about the XMPP protocol extensions, see [XMPP Protocol Extensions](./5-xmpp-protocol-extensions.md).
 
 Sources: [src/java/org/ifsoft/galene/openfire/Galene.java L122-L131](https://github.com/igniterealtime/openfire-galene-plugin/blob/5aa54ac8/src/java/org/ifsoft/galene/openfire/Galene.java#L122-L131)
 

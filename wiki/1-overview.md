@@ -7,7 +7,7 @@
 
 This document provides an overview of the Openfire Galene Plugin, which integrates Galène SFU (Selective Forwarding Unit) capabilities into the Openfire XMPP server to enable video conferencing functionality. The plugin embeds platform-specific Galène binaries and provides both web-based and XMPP-native interfaces for video conferencing.
 
-For detailed installation procedures, see [Installation & Configuration](/igniterealtime/openfire-galene-plugin/2-installation-and-configuration). For information about the custom XMPP protocol extensions, see [XMPP Protocol Extensions](/igniterealtime/openfire-galene-plugin/5-xmpp-protocol-extensions). For comprehensive API documentation, see [API Reference](/igniterealtime/openfire-galene-plugin/8-api-reference).
+For detailed installation procedures, see [Installation & Configuration](./2-installation-and-configuration.md). For information about the custom XMPP protocol extensions, see [XMPP Protocol Extensions](./5-xmpp-protocol-extensions.md). For comprehensive API documentation, see [API Reference](./8-api-reference.md).
 
 ## Purpose and Architecture
 
@@ -221,7 +221,7 @@ The plugin currently provides:
 * **Room Management**: Full MUC integration with permission mapping
 * **Media Handling**: WebRTC with ICE/STUN/TURN support
 
-For detailed configuration options, see [Advanced Configuration](/igniterealtime/openfire-galene-plugin/2.3-advanced-configuration). For client integration guides, see [XMPP Client Integration](/igniterealtime/openfire-galene-plugin/3.3-xmpp-client-integration) and [Web Client Interface](/igniterealtime/openfire-galene-plugin/3.2-web-client-interface).
+For detailed configuration options, see [Advanced Configuration](./2.3-advanced-configuration.md). For client integration guides, see [XMPP Client Integration](./3.3-xmpp-client-integration.md) and [Web Client Interface](./3.2-web-client-interface.md).
 
 Sources: [README.md L1-L78](https://github.com/igniterealtime/openfire-galene-plugin/blob/5aa54ac8/README.md#L1-L78)
 

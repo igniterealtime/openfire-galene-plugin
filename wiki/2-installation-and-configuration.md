@@ -5,7 +5,7 @@
 > * [pom.xml](https://github.com/igniterealtime/openfire-galene-plugin/blob/5aa54ac8/pom.xml)
 > * [readme.html](https://github.com/igniterealtime/openfire-galene-plugin/blob/5aa54ac8/readme.html)
 
-This page covers the installation and configuration of the Openfire Galene Plugin, including system requirements, installation methods, and an overview of configuration options. For detailed build instructions, see [Building from Source](/igniterealtime/openfire-galene-plugin/2.1-building-from-source). For step-by-step installation guidance, see [Plugin Installation & Basic Setup](/igniterealtime/openfire-galene-plugin/2.2-plugin-installation-and-basic-setup). For comprehensive configuration details, see [Advanced Configuration](/igniterealtime/openfire-galene-plugin/2.3-advanced-configuration).
+This page covers the installation and configuration of the Openfire Galene Plugin, including system requirements, installation methods, and an overview of configuration options. For detailed build instructions, see [Building from Source](./2.1-building-from-source.md). For step-by-step installation guidance, see [Plugin Installation & Basic Setup](./2.2-plugin-installation-and-basic-setup.md). For comprehensive configuration details, see [Advanced Configuration](./2.3-advanced-configuration.md).
 
 ## Overview
 
