@@ -10,7 +10,7 @@
 
 This document provides an overview of the custom XMPP protocol extensions that enable Selective Forwarding Unit (SFU) functionality within the XMPP ecosystem. These extensions allow XMPP clients to communicate directly with embedded SFU servers through standardized XMPP IQ stanzas, eliminating the need for separate signaling protocols or transport mechanisms.
 
-For detailed specification of the primary protocol extension, see [XEP-XXXX: In-Band SFU Sessions](./5.1-xep-xxxx:-in-band-sfu-sessions.md). For information about how these protocols are implemented in IQ handlers, see [XMPP IQ Handlers](./8.2-xmpp-iq-handlers.md).
+For detailed specification of the primary protocol extension, see [XEP-XXXX: In-Band SFU Sessions](./5.1-xep-xxxx_in-band-sfu-sessions.md). For information about how these protocols are implemented in IQ handlers, see [XMPP IQ Handlers](./8.2-xmpp-iq-handlers.md).
 
 ## Protocol Extension Overview
 
