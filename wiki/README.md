@@ -1,6 +1,4 @@
-# igniterealtime-openfire-galene-plugin-DeepWiki
-
-## Content Index
+# Table of Contents
 
 - [1-overview](1-overview.md)
 - [2-installation-and-configuration](2-installation-and-configuration.md)
