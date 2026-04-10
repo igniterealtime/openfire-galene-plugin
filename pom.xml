@@ -7,12 +7,12 @@
     <parent>
         <artifactId>plugins</artifactId>
         <groupId>org.igniterealtime.openfire</groupId>
-        <version>5.0.3</version>
+        <version>5.0.4</version>
     </parent>
     
     <groupId>org.igniterealtime.openfire</groupId>
     <artifactId>galene</artifactId>
-    <version>0.9.5-SNAPSHOT</version>
+    <version>0.9.6-SNAPSHOT</version>
     
     <properties>      
     </properties>    
