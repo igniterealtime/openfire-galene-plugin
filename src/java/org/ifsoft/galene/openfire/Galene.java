@@ -166,6 +166,10 @@ public class Galene implements Plugin, PropertyEventListener, ProcessListener, M
 
         try {
             ourIpAddress = InetAddress.getByName(ourHostname).getHostAddress();
+			
+			if (ourIpAddress != null && ourIpAddress.contains(":") && !ourIpAddress.startsWith("[")) {
+				ourIpAddress = "[" + ourIpAddress + "]";
+			}			
         } catch (Exception e) {
 
         }
